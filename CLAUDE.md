@@ -126,13 +126,22 @@ would silently send nothing.
 
 ## Facebook Pixel + Conversions API
 
-Three statuses convert; the other three are internal flags and deliberately send **nothing**:
+Three statuses convert; the other three send **nothing**:
 
 | Status | Event | Value |
 |---|---|---|
-| `pending` | `InitiateCheckout` | — |
-| `confirm` | `Lead` | — |
-| `delivered` | `Purchase` | order total |
+| `pending` | `Lead` | — |
+| `confirm` | `Purchase` | order total |
+| `cancel` | `Cancel` (custom) | — |
+
+The mapping sits one stage earlier than Facebook's own funnel naming, to suit cash on delivery: a
+submitted order is a `Lead`, and `Purchase` fires when an admin confirms it by phone rather than on
+delivery. That reports money for orders that may still fail to deliver, in exchange for a signal the
+algorithm gets in hours instead of days. **`delivered` therefore sends nothing** — the Purchase has
+already gone.
+
+`Cancel` is **not a Meta standard event**; it goes as a custom event, so it needs a Custom Conversion
+before it can drive optimisation, and it does not retract the `Purchase` already sent at `confirm`.
 
 `App\Observers\OrderObserver` is the **single trigger point** — hooking the admin controller would
 have missed the courier webhook and `courier:sync`, and hooking all three would have double-sent.
@@ -143,7 +152,7 @@ have missed the courier webhook and `courier:sync`, and hooking all three would 
 - **Failures** land in `fb_event_logs` with the payload; `php artisan fb:retry-events` (hourly)
   replays them verbatim, up to 5 attempts. Tracking never fails an order update.
 - **Match quality**: `ip_address` and `user_agent` are captured at checkout from the connection and
-  reused for the later Lead and Purchase, which have no browser. Phone is normalised to `8801…`
+  reused for the later Purchase and Cancel, which have no browser. Phone is normalised to `8801…`
   before hashing — the local `01…` form matches nothing.
 - **`fbc` persistence**: `lib/attribution.ts` writes `fb.1.<click ts>.<fbclid>` to *localStorage* on
   arrival (the rest of the attribution is sessionStorage). The timestamp must be the click, so it

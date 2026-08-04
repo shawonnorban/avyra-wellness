@@ -11,11 +11,11 @@ use Throwable;
 /**
  * Sends order conversions to Facebook's Conversions API.
  *
- * Server-side rather than browser-side on purpose: the events that matter most
- * (Lead, Purchase) happen when an admin changes a status hours later, with no
- * browser involved. The browser pixel still fires PageView and its own
- * InitiateCheckout; both sides send the same `event_id`, so Facebook
- * deduplicates the pair instead of counting it twice.
+ * Server-side rather than browser-side on purpose: the event that matters most
+ * (Purchase) fires when an admin confirms the order by phone hours later, with
+ * no browser involved. The browser pixel still fires PageView and its own Lead
+ * at checkout; both sides send the same `event_id`, so Facebook deduplicates the
+ * pair instead of counting it twice.
  */
 class FacebookCapiService
 {

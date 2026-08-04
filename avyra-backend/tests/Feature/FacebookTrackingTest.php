@@ -66,43 +66,58 @@ class FacebookTrackingTest extends TestCase
         return $events;
     }
 
-    public function test_a_new_order_sends_initiate_checkout(): void
+    public function test_a_new_order_sends_lead(): void
     {
         $order = $this->order();
 
         $events = $this->sentEvents();
 
         $this->assertCount(1, $events);
-        $this->assertSame('InitiateCheckout', $events[0]['event_name']);
-        $this->assertTrue($order->fresh()->fb_events_sent['initiateCheckout']);
+        $this->assertSame('Lead', $events[0]['event_name']);
+        $this->assertTrue($order->fresh()->fb_events_sent['lead']);
     }
 
-    public function test_confirming_sends_lead_and_delivering_sends_purchase_with_the_value(): void
+    public function test_confirming_sends_purchase_with_the_value_and_delivering_adds_nothing(): void
     {
         $order = $this->order();
 
         $order->update(['status' => OrderStatus::Confirm]);
+        // Purchase already went at confirm; a second one here would count the
+        // same order's money twice.
         $order->update(['status' => OrderStatus::Delivered]);
 
         $events = $this->sentEvents();
         $names = array_column($events, 'event_name');
 
-        $this->assertSame(['InitiateCheckout', 'Lead', 'Purchase'], $names);
+        $this->assertSame(['Lead', 'Purchase'], $names);
 
         // Only Purchase carries money; a value on Lead would double-count revenue.
-        $this->assertArrayNotHasKey('value', $events[1]['custom_data']);
-        $this->assertSame(1500.0, $events[2]['custom_data']['value']);
-        $this->assertSame('BDT', $events[2]['custom_data']['currency']);
+        $this->assertArrayNotHasKey('value', $events[0]['custom_data']);
+        $this->assertSame(1500.0, $events[1]['custom_data']['value']);
+        $this->assertSame('BDT', $events[1]['custom_data']['currency']);
     }
 
-    public function test_hold_fake_and_cancel_send_nothing(): void
+    public function test_cancelling_sends_a_valueless_cancel_event(): void
     {
-        // Created straight into `hold` so the InitiateCheckout of a normal
-        // checkout does not muddy the count.
+        $order = $this->order();
+
+        $order->update(['status' => OrderStatus::Cancel]);
+
+        $events = $this->sentEvents();
+
+        $this->assertSame(['Lead', 'Cancel'], array_column($events, 'event_name'));
+        $this->assertArrayNotHasKey('value', $events[1]['custom_data']);
+        $this->assertTrue($order->fresh()->fb_events_sent['cancel']);
+    }
+
+    public function test_hold_fake_and_delivered_send_nothing(): void
+    {
+        // Created straight into `hold` so the Lead of a normal checkout does not
+        // muddy the count.
         $order = $this->order(['status' => OrderStatus::Hold]);
 
         $order->update(['status' => OrderStatus::Fake]);
-        $order->update(['status' => OrderStatus::Cancel]);
+        $order->update(['status' => OrderStatus::Delivered]);
 
         Http::assertNothingSent();
         $this->assertNull($order->fresh()->fb_events_sent);
@@ -142,7 +157,7 @@ class FacebookTrackingTest extends TestCase
         $order = $this->order();
 
         $this->assertSame(
-            "{$order->order_number}-InitiateCheckout",
+            "{$order->order_number}-Lead",
             $this->sentEvents()[0]['event_id'],
         );
     }
@@ -155,7 +170,7 @@ class FacebookTrackingTest extends TestCase
 
         $log = FbEventLog::where('order_id', $order->id)->firstOrFail();
 
-        $this->assertSame('InitiateCheckout', $log->event_name);
+        $this->assertSame('Lead', $log->event_name);
         $this->assertSame(FbEventLog::STATUS_FAILED, $log->status);
         $this->assertSame(1, $log->attempt_count);
 
@@ -175,7 +190,7 @@ class FacebookTrackingTest extends TestCase
 
         $this->assertSame(FbEventLog::STATUS_SUCCESS, $log->status);
         $this->assertSame(2, $log->attempt_count);
-        $this->assertTrue($order->fresh()->fb_events_sent['initiateCheckout']);
+        $this->assertTrue($order->fresh()->fb_events_sent['lead']);
     }
 
     public function test_the_retry_command_gives_up_after_the_attempt_cap(): void

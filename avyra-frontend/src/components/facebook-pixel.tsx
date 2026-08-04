@@ -66,7 +66,7 @@ export function FacebookPixel() {
  * or blocked — the server copy is what the reporting actually relies on.
  */
 export function trackPixelEvent(
-  event: "InitiateCheckout" | "Lead" | "Purchase",
+  event: "Lead" | "Purchase",
   eventId: string,
   data?: Record<string, unknown>,
 ): void {

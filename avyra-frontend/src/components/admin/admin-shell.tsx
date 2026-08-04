@@ -42,7 +42,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin", module: "dashboard" },
   { label: "Shop", icon: ShoppingBag, path: "/shop", external: true },
-  { label: "Sales & CRM", icon: ShoppingCart, path: "/admin/orders", module: "sales" },
+  { label: "Order", icon: ShoppingCart, path: "/admin/orders", module: "sales" },
   { label: "Customers", icon: UserCircle, path: "/admin/customers", module: "customers" },
   { label: "Courier", icon: Truck, path: "/admin/courier", module: "courier" },
   { label: "Purchase", icon: Receipt, path: "/admin/purchase", module: "purchase" },

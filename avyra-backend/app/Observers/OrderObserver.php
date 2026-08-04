@@ -28,8 +28,8 @@ class OrderObserver
 
     public function created(Order $order): void
     {
-        // A checkout lands as `pending`, which is InitiateCheckout. An order an
-        // admin creates already `confirm` is a Lead — keyFor() covers both.
+        // A checkout lands as `pending`, which is a Lead. An order an admin
+        // creates already `confirm` is a Purchase — keyFor() covers both.
         $this->dispatchFor($order);
     }
 
@@ -46,7 +46,7 @@ class OrderObserver
     {
         $key = FacebookEventMap::keyFor($order->status);
 
-        // hold, fake and cancel deliberately send nothing.
+        // hold, fake and delivered deliberately send nothing.
         if ($key === null) {
             return;
         }

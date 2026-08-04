@@ -18,6 +18,25 @@ return Application::configure(basePath: dirname(__DIR__))
         // /api requests from a stateful origin get the web session + CSRF applied.
         $middleware->statefulApi();
 
+        /*
+         * Behind a load balancer, CDN or shared-host proxy, the connection IP is
+         * the proxy's — identical for every customer. Two things read it and
+         * would be quietly wrong: the fraud detector's repeat-IP rule (which
+         * would score unrelated buyers as the same person and start blocking
+         * them) and the `client_ip_address` sent to the Conversions API.
+         *
+         * TRUSTED_PROXIES takes a comma-separated list, or `*` to trust the
+         * immediate peer — correct only when nothing but your proxy can reach
+         * PHP, which is the normal case on shared hosting. Left unset, Laravel
+         * trusts nothing and the IP stays the connection address, so this is
+         * safe by default and opt-in for production.
+         */
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(
+                at: $proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)),
+            );
+        }
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'module' => \App\Http\Middleware\EnsureModulePermission::class,

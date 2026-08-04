@@ -141,12 +141,14 @@ export function CampaignOrderForm({
         ...getAttribution(),
       });
 
-      // The browser half of the conversion. The server sends the same event with
-      // the same id, so Facebook counts one InitiateCheckout rather than two —
-      // and the event still lands if the server call is the one that fails.
-      trackPixelEvent("InitiateCheckout", `${order.order_number}-InitiateCheckout`, {
-        value: order.total,
-        currency: "BDT",
+      // The browser half of the conversion. A submitted order is a Lead; the
+      // Purchase follows server-side when an admin confirms it. The server sends
+      // this same event with the same id, so Facebook counts one Lead rather
+      // than two — and it still lands if the server call is the one that fails.
+      //
+      // No `value`: only Purchase reports money, and a value here would have the
+      // browser claiming revenue the server copy does not.
+      trackPixelEvent("Lead", `${order.order_number}-Lead`, {
         content_type: "product",
         content_ids: [product.id],
         content_name: product.name,
