@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Http\Controllers\Api\Admin;
+
+use App\Enums\OrderStatus;
+use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\Product;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+
+class DashboardController extends Controller
+{
+    public function index(): JsonResponse
+    {
+        $byStatus = Order::selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $count = fn (OrderStatus $s) => (int) ($byStatus[$s->value] ?? 0);
+
+        return response()->json([
+            'data' => [
+                'orders' => [
+                    'total' => (int) $byStatus->sum(),
+                    'today' => Order::whereDate('order_date', today())->count(),
+                    'confirmed' => $count(OrderStatus::Confirm),
+                    'delivered' => $count(OrderStatus::Delivered),
+                    'cancelled' => $count(OrderStatus::Cancel),
+                    'hold' => $count(OrderStatus::Hold),
+                    'fake' => $count(OrderStatus::Fake),
+                    'pending' => $count(OrderStatus::Pending),
+                ],
+                'customers' => Customer::count(),
+                'revenue' => [
+                    // Only settled orders count as revenue.
+                    'today' => $this->revenue(today(), today()),
+                    'this_month' => $this->revenue(now()->startOfMonth(), now()->endOfMonth()),
+                ],
+                'inventory' => [
+                    'low_stock' => Product::whereColumn('quantity', '<=', 'min_stock')->where('quantity', '>', 0)->count(),
+                    'out_of_stock' => Product::where('quantity', 0)->count(),
+                    'stock_value' => (float) Product::selectRaw('COALESCE(SUM(quantity * cost_price), 0) as v')->value('v'),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Revenue by day for the dashboard chart.
+     */
+    public function revenueChart(): JsonResponse
+    {
+        $rows = Order::selectRaw('order_date, SUM(total) as revenue, COUNT(*) as orders')
+            ->where('status', OrderStatus::Delivered->value)
+            ->where('order_date', '>=', now()->subDays(29)->toDateString())
+            ->groupBy('order_date')
+            ->orderBy('order_date')
+            ->get();
+
+        return response()->json([
+            'data' => $rows->map(fn ($r) => [
+                'date' => $r->order_date,
+                'revenue' => (float) $r->revenue,
+                'orders' => (int) $r->orders,
+            ]),
+        ]);
+    }
+
+    public function recentOrders(): JsonResponse
+    {
+        $orders = Order::latest('created_at')->limit(10)->get([
+            'id', 'order_number', 'customer_name', 'phone', 'total', 'status', 'order_date',
+        ]);
+
+        return response()->json(['data' => $orders]);
+    }
+
+    public function topProducts(): JsonResponse
+    {
+        $rows = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', OrderStatus::Delivered->value)
+            ->selectRaw('order_items.product_name, SUM(order_items.quantity) as units, SUM(order_items.quantity * order_items.unit_price) as revenue')
+            ->groupBy('order_items.product_name')
+            ->orderByDesc('units')
+            ->limit(10)
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    private function revenue($from, $to): float
+    {
+        return (float) Order::where('status', OrderStatus::Delivered->value)
+            ->whereBetween('order_date', [$from, $to])
+            ->sum('total');
+    }
+}

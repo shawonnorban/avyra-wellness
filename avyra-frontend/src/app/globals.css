@@ -1,0 +1,284 @@
+@import "tailwindcss";
+
+/*
+  Design system ported 1:1 from the previous Avyra build (data-state-hub).
+  Tailwind v4 has no config file, so the shadcn-style HSL tokens live here and are
+  exposed to utilities through `@theme inline`.
+*/
+
+:root {
+  /* ── shadcn/ERP palette ── */
+  --background: hsl(210 20% 96%);
+  --foreground: hsl(210 29% 15%);
+
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(210 29% 15%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 29% 15%);
+
+  --primary: hsl(160 52% 34%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  --secondary: hsl(210 20% 93%);
+  --secondary-foreground: hsl(210 29% 15%);
+
+  --muted: hsl(210 16% 93%);
+  --muted-foreground: hsl(210 10% 46%);
+
+  --accent: hsl(160 40% 94%);
+  --accent-foreground: hsl(160 52% 24%);
+
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+
+  --success: hsl(152 56% 40%);
+  --success-foreground: hsl(0 0% 100%);
+
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(0 0% 100%);
+
+  --info: hsl(205 80% 50%);
+  --info-foreground: hsl(0 0% 100%);
+
+  --shop-topbar: hsl(36 96% 52%);
+  --shop-topbar-foreground: hsl(0 0% 100%);
+
+  --border: hsl(214 20% 88%);
+  --input: hsl(214 20% 88%);
+  --ring: hsl(160 52% 34%);
+
+  --radius: 0.25rem;
+
+  /* ── Admin sidebar ── */
+  --sidebar: hsl(207 40% 16%);
+  --sidebar-foreground: hsl(210 20% 80%);
+  --sidebar-hover: hsl(207 38% 20%);
+  --sidebar-active: hsl(160 52% 34%);
+  --sidebar-active-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(207 30% 22%);
+
+  --chart-1: hsl(160 52% 34%);
+  --chart-2: hsl(205 80% 50%);
+  --chart-3: hsl(38 92% 50%);
+  --chart-4: hsl(152 56% 40%);
+  --chart-5: hsl(0 72% 51%);
+
+  /* ── Avyra brand ── */
+  --avyra-teal: hsl(188 62% 21%);
+  --avyra-teal-deep: hsl(192 70% 14%);
+  --avyra-teal-light: hsl(188 45% 88%);
+  --avyra-cream: hsl(40 55% 95%);
+  --avyra-coral: hsl(14 72% 60%);
+  --avyra-orange: hsl(22 88% 56%);
+  --avyra-ink: hsl(200 30% 12%);
+}
+
+.dark {
+  --background: hsl(222 47% 6%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(222 47% 9%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(222 47% 9%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(160 52% 40%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(217 33% 17%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(217 33% 17%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(217 33% 17%);
+  --accent-foreground: hsl(210 40% 98%);
+  --destructive: hsl(0 63% 31%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(217 33% 17%);
+  --input: hsl(217 33% 17%);
+  --ring: hsl(160 52% 40%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-avyra-teal: var(--avyra-teal);
+  --color-avyra-teal-deep: var(--avyra-teal-deep);
+  --color-avyra-teal-light: var(--avyra-teal-light);
+  --color-avyra-cream: var(--avyra-cream);
+  --color-avyra-coral: var(--avyra-coral);
+  --color-avyra-orange: var(--avyra-orange);
+  --color-avyra-ink: var(--avyra-ink);
+
+  --font-sans: var(--font-rethink), system-ui, sans-serif;
+  --font-display: var(--font-rethink), system-ui, sans-serif;
+  --font-body: var(--font-rethink), system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-rethink), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/*
+  Bengali switches the whole type stack to Anek Bangla, exactly as the old build did
+  when the language toggle set html[lang="bn"].
+*/
+html[lang="bn"] body,
+html[lang="bn"] .font-sans,
+html[lang="bn"] .font-display,
+html[lang="bn"] .font-body {
+  font-family: var(--font-anek-bangla), var(--font-rethink), system-ui, sans-serif;
+}
+
+@utility avyra-footer-gradient {
+  background: radial-gradient(ellipse at top, hsl(188 55% 24%) 0%, hsl(192 70% 12%) 70%);
+}
+
+@utility avyra-coral-gradient {
+  background: linear-gradient(135deg, hsl(14 75% 62%) 0%, hsl(8 70% 56%) 100%);
+}
+
+@utility erp-shadow {
+  box-shadow:
+    0 1px 3px 0 hsl(210 29% 15% / 0.06),
+    0 1px 2px -1px hsl(210 29% 15% / 0.06);
+}
+
+@utility erp-shadow-md {
+  box-shadow:
+    0 4px 6px -1px hsl(210 29% 15% / 0.07),
+    0 2px 4px -2px hsl(210 29% 15% / 0.05);
+}
+
+/* Promotional ticker in the storefront shell. */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+/* Slim scrollbars, matching the old admin chrome. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(210 10% 46% / 0.3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(210 10% 46% / 0.3);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(210 10% 46% / 0.5);
+}
+
+/* Rich text from the product editor / landing page builder. */
+.prose-avyra :where(h2) {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-block: 1.5rem 0.75rem;
+}
+.prose-avyra :where(h3) {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-block: 1.25rem 0.5rem;
+}
+.prose-avyra :where(p) {
+  margin-block: 0.75rem;
+  line-height: 1.75;
+}
+.prose-avyra :where(ul) {
+  list-style: disc;
+  padding-inline-start: 1.5rem;
+  margin-block: 0.75rem;
+}
+.prose-avyra :where(ol) {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+  margin-block: 0.75rem;
+}
+.prose-avyra :where(a) {
+  color: var(--avyra-teal);
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
