@@ -46,6 +46,12 @@ class SettingController extends Controller
             $rules['value.logo_path'] = ['nullable', new StoredImagePath()];
         }
 
+        // Every slide likewise: a registered upload, not a link to somewhere else.
+        if ($key === 'campaign_slider') {
+            $rules['value.images'] = ['sometimes', 'array', 'max:12'];
+            $rules['value.images.*'] = [new StoredImagePath()];
+        }
+
         $request->validate($rules);
 
         // Read the raw input, not validated(): naming `value.logo_path` in the rules

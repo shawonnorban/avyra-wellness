@@ -4,7 +4,11 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
-import { ImageUpload, type UploadFolder } from "@/components/admin/image-uploader";
+import {
+  ImageGalleryUpload,
+  ImageUpload,
+  type UploadFolder,
+} from "@/components/admin/image-uploader";
 import { BannersTab, PermissionsTab, StaffTab } from "@/components/admin/settings-tabs";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -16,9 +20,11 @@ type SettingField = {
   /** Dot-notation reaches into a nested object, e.g. `social.facebook`. */
   name: string;
   label: string;
-  type?: "text" | "number" | "checkbox" | "textarea" | "image";
+  type?: "text" | "number" | "checkbox" | "textarea" | "image" | "gallery";
   hint?: string;
   folder?: UploadFolder;
+  /** `gallery` only: how many images the field accepts. */
+  max?: number;
 };
 
 /** Reads a possibly-nested value by dot path. */
@@ -114,6 +120,28 @@ const GROUPS: {
       { name: "shipping", label: "Shipping policy", type: "textarea" },
       { name: "terms", label: "Terms of service", type: "textarea" },
       { name: "privacy", label: "Privacy policy", type: "textarea" },
+    ],
+  },
+  {
+    key: "campaign_slider",
+    label: "Campaign Slider",
+    description:
+      "The images beside the order form on /avyravitalplus. They play in the order shown — use the arrows to reorder. With no images set, the product's own photo is used instead.",
+    fields: [
+      {
+        name: "images",
+        label: "Slides",
+        type: "gallery",
+        folder: "landing",
+        max: 12,
+        hint: "Drop images here or click Add. Portrait or square works best — each one is cropped to the height of the order form.",
+      },
+      {
+        name: "interval_seconds",
+        label: "Seconds per slide",
+        type: "number",
+        hint: "Minimum 2. Defaults to 5.",
+      },
     ],
   },
   {
@@ -315,6 +343,22 @@ function SettingGroupForm({
                     onChange={(path) => set(field.name, path)}
                     folder={field.folder ?? "logos"}
                     hint={field.hint}
+                  />
+                </div>
+              );
+            }
+
+            if (field.type === "gallery") {
+              return (
+                <div key={field.name} className="sm:col-span-2">
+                  <ImageGalleryUpload
+                    label={field.label}
+                    value={Array.isArray(value) ? (value as string[]) : []}
+                    onChange={(paths) => set(field.name, paths)}
+                    folder={field.folder ?? "landing"}
+                    max={field.max ?? 10}
+                    hint={field.hint}
+                    showReorder
                   />
                 </div>
               );

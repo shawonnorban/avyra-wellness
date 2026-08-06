@@ -85,6 +85,12 @@ export type StorefrontSettings = {
   };
   /** Plain-text bodies for the footer policy pages. */
   policies?: Partial<Record<"returns" | "shipping" | "terms" | "privacy", string>>;
+  /** Slider beside the order form on the campaign pages. */
+  campaign_slider?: {
+    /** Ready-to-use URLs in play order; the API resolves them from stored paths. */
+    image_urls?: string[];
+    interval_seconds?: number;
+  };
   /** Staff-written social-proof popup shown on campaign pages. */
   purchase_popup?: {
     enabled?: boolean;

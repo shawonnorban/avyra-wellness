@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { ImagePlus, Loader2, Star, Trash2, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Star, Trash2, Upload } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -159,8 +159,11 @@ export function ImageUpload({
 }
 
 /**
- * Multi-image field with drag-and-drop. The first image is the primary one, so
- * ordering matters — hence the "make primary" control rather than free sorting.
+ * Multi-image field with drag-and-drop.
+ *
+ * Two ways to care about order: `showPrimary` when only the first image is
+ * special (a product's main photo), `showReorder` when the whole sequence is
+ * meaningful — a slider plays them in the order given.
  */
 export function ImageGalleryUpload({
   label,
@@ -170,6 +173,7 @@ export function ImageGalleryUpload({
   max = 10,
   hint,
   showPrimary = false,
+  showReorder = false,
 }: {
   label: string;
   value: string[];
@@ -178,6 +182,7 @@ export function ImageGalleryUpload({
   max?: number;
   hint?: string;
   showPrimary?: boolean;
+  showReorder?: boolean;
 }) {
   const inputId = useId();
   const upload = useUpload(folder);
@@ -204,6 +209,17 @@ export function ImageGalleryUpload({
     const next = [...value];
     const [picked] = next.splice(index, 1);
     onChange([picked, ...next]);
+  };
+
+  /** Swaps with the neighbour; the callers' arrays are short enough that a
+      one-step move is easier to follow than drag-to-sort. */
+  const move = (index: number, by: -1 | 1) => {
+    const target = index + by;
+    if (target < 0 || target >= value.length) return;
+
+    const next = [...value];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
   };
 
   return (
@@ -251,7 +267,37 @@ export function ImageGalleryUpload({
                   </span>
                 )}
 
+                {showReorder && (
+                  <span className="absolute left-1 top-1 rounded-sm bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    {i + 1}
+                  </span>
+                )}
+
                 <div className="absolute inset-x-1 bottom-1 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  {showReorder && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => move(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Move image earlier"
+                        title="Move earlier"
+                        className="rounded-sm bg-black/60 p-1 text-white hover:bg-primary disabled:opacity-30 disabled:hover:bg-black/60"
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => move(i, 1)}
+                        disabled={i === value.length - 1}
+                        aria-label="Move image later"
+                        title="Move later"
+                        className="rounded-sm bg-black/60 p-1 text-white hover:bg-primary disabled:opacity-30 disabled:hover:bg-black/60"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </button>
+                    </>
+                  )}
                   {showPrimary && i > 0 && (
                     <button
                       type="button"

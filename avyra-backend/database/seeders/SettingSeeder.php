@@ -67,6 +67,15 @@ class SettingSeeder extends Seeder
                 'entries' => "মহিউদ্দিন | টাঙ্গাইল\nরাকিব হাসান | চট্টগ্রাম\nসাইফুল ইসলাম | রাজশাহী\nআরিফ হোসেন | সিলেট\nজাহিদুল ইসলাম | খুলনা",
             ], true],
 
+            // Image slider beside the order form on the campaign pages. Public so the
+            // storefront can read it. `images` is an ordered list of upload paths —
+            // the order is the play order, and an empty list falls back to the
+            // product's own photo so the section is never blank.
+            ['campaign_slider', [
+                'images' => [],
+                'interval_seconds' => 5,
+            ], true],
+
             ['payment', [
                 'cod_enabled' => true,
                 'bkash_number' => '',

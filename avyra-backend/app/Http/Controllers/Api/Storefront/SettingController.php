@@ -25,6 +25,14 @@ class SettingController extends Controller
                     unset($value['logo_path']);
                 }
 
+                // Same for the slider, keeping the authored order. Resolved here
+                // rather than in the browser so the storage host stays a
+                // server-side detail.
+                if ($key === 'campaign_slider' && is_array($value)) {
+                    $value['image_urls'] = Media::urls($value['images'] ?? []);
+                    unset($value['images']);
+                }
+
                 return $value;
             });
 

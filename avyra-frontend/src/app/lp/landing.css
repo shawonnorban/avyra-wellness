@@ -1461,6 +1461,64 @@
   object-position: center;
 }
 
+/* ── Slider inside the media panel ──
+   Fills the panel exactly, so it inherits the height the order form sets. */
+.lp .lp-slider {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+ * All slides are stacked and only opacity changes, so nothing reflows on a
+ * change — the panel keeps the order form's height throughout. `.lp-split-media
+ * img` already positions them; only the fade belongs here.
+ */
+.lp .lp-slide {
+  opacity: 0;
+  transition: opacity 0.9s ease-in-out;
+  /* Out of the way of the dots when hidden, so a stale slide cannot take a tap. */
+  pointer-events: none;
+}
+
+.lp .lp-slide.on { opacity: 1; }
+
+.lp .lp-slider-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  z-index: 1;
+}
+
+.lp .lp-slider-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.lp .lp-slider-dot.on {
+  background: #fff;
+  transform: scale(1.25);
+}
+
+.lp .lp-slider-dot:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp .lp-slide { transition: opacity 0.01ms; }
+}
+
 /* Shared by the 3-card and 6-card sections so they stay visually identical. */
 .lp .lp-card-grid {
   display: grid;

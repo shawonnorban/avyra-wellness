@@ -13,6 +13,7 @@ import {
 } from "@/components/avyra/home-sections";
 import { FacebookPixel } from "@/components/facebook-pixel";
 import { LanguageLock } from "@/components/language-provider";
+import { CampaignSlider } from "@/components/landing/campaign-slider";
 import { LpTopHeader, Reveal, ScrollTopButton } from "@/components/landing/landing-chrome";
 import { CampaignOrderForm } from "@/components/landing/landing-order-form";
 import { PurchasePopup } from "@/components/landing/purchase-popup";
@@ -38,7 +39,13 @@ export function CampaignPage() {
   const scrollToForm = () => orderRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const scrollText = settings?.company?.scroll_text ?? "";
-  const heroImage = product?.images?.[0] ?? null;
+
+  // Admin-authored slides win; with none set the product's own photo stands in,
+  // so the panel is never empty on a fresh install.
+  const slider = settings?.campaign_slider;
+  const slides = slider?.image_urls?.length
+    ? slider.image_urls
+    : [product?.images?.[0]].filter((src): src is string => Boolean(src));
 
   return (
     /* Bengali regardless of the site-wide toggle — the campaign copy only exists
@@ -69,10 +76,13 @@ export function CampaignPage() {
         <Reveal>
           <div className="lp-split">
             {/* A direct grid child, so it stretches to the order form's height. */}
-            {heroImage && (
+            {slides.length > 0 && (
               <div className="lp-split-media">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={heroImage} alt={product?.name ?? ""} />
+                <CampaignSlider
+                  images={slides}
+                  intervalSeconds={slider?.interval_seconds ?? 5}
+                  alt={product?.name ?? ""}
+                />
               </div>
             )}
 
