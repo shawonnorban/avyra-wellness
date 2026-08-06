@@ -16,7 +16,11 @@ class NotificationController extends Controller
             ->latest('created_at')
             ->paginate($request->integer('per_page', 25));
 
-        return response()->json($notifications + ['unread_count' => Notification::unread()->count()]);
+        // `toArray()` first: `paginate()` returns a paginator object, and `+` on an
+        // object is a TypeError rather than a merge — this endpoint used to 500.
+        return response()->json(
+            $notifications->toArray() + ['unread_count' => Notification::unread()->count()],
+        );
     }
 
     public function markRead(Notification $notification): JsonResponse

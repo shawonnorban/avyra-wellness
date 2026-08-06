@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
 use App\Enums\Role;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -262,5 +263,44 @@ class AdminApiTest extends TestCase
 
         $response->assertOk();
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
+    }
+public function test_notifications_list_carries_the_unread_count(): void
+    {
+        Notification::create([
+            'type' => 'order', 'title' => 'New order received',
+            'message' => 'AVY-1', 'link' => '/admin/orders', 'is_read' => false,
+        ]);
+        Notification::create([
+            'type' => 'courier', 'title' => 'Order returned',
+            'message' => 'AVY-2', 'link' => null, 'is_read' => true,
+        ]);
+
+        // The paginator is an object, so building this payload with `+` used to
+        // throw a TypeError and the endpoint 500'd — the badge never had a number.
+        $this->actingAs($this->userWithRole(Role::Employee))
+            ->getJson('/api/admin/notifications')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('unread_count', 1);
+    }
+
+    public function test_marking_all_read_clears_the_unread_count(): void
+    {
+        Notification::create([
+            'type' => 'order', 'title' => 'New order received',
+            'message' => 'AVY-1', 'link' => null, 'is_read' => false,
+        ]);
+
+        // One user for both calls — the helper creates a row, so calling it twice
+        // collides on the unique email.
+        $staff = $this->userWithRole(Role::Employee);
+
+        $this->actingAs($staff)
+            ->postJson('/api/admin/notifications/read-all')
+            ->assertOk();
+
+        $this->actingAs($staff)
+            ->getJson('/api/admin/notifications')
+            ->assertJsonPath('unread_count', 0);
     }
 }

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bell,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -25,7 +24,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 import { Spinner } from "@/components/ui/misc";
-import { useLogout, useMe, useNotifications } from "@/lib/admin";
+import { NotificationBell } from "@/components/admin/notification-bell";
+import { useLogout, useMe } from "@/lib/admin";
 import type { AdminUser } from "@/lib/types";
 import { useStoredValue } from "@/lib/use-stored-value";
 
@@ -218,10 +218,7 @@ function AdminSidebar({
 function AdminTopBar({ user, onOpenMobile }: { user: AdminUser; onOpenMobile: () => void }) {
   const router = useRouter();
   const logout = useLogout();
-  const { data: notifications } = useNotifications();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const unread = notifications?.unread_count ?? 0;
 
   const initials =
     user.name
@@ -266,18 +263,7 @@ function AdminTopBar({ user, onOpenMobile }: { user: AdminUser; onOpenMobile: ()
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
-        <Link
-          href="/admin/notifications"
-          className="relative rounded-sm p-2 hover:bg-secondary"
-          aria-label={`Notifications, ${unread} unread`}
-        >
-          <Bell className="h-[18px] w-[18px] text-muted-foreground" />
-          {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
-              {unread > 99 ? "99+" : unread}
-            </span>
-          )}
-        </Link>
+        <NotificationBell />
 
         <div className="relative">
           <button

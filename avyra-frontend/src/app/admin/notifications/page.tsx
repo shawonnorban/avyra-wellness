@@ -1,33 +1,26 @@
 ﻿"use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
-import api, { toApiError } from "@/lib/api";
+import { toApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, EmptyState, Spinner } from "@/components/ui/misc";
-import { useNotifications } from "@/lib/admin";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from "@/lib/admin";
 import { formatDateTime } from "@/lib/format";
 
 export default function AdminNotificationsPage() {
-  const queryClient = useQueryClient();
   const { data, isLoading } = useNotifications();
 
-  const markAllRead = useMutation({
-    mutationFn: async () => {
-      await api.post("/admin/notifications/read-all");
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] }),
-  });
-
-  const markRead = useMutation({
-    mutationFn: async (id: string) => {
-      await api.patch(`/admin/notifications/${id}/read`);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] }),
-  });
+  // Shared with the topbar panel, so both invalidate the same cache entry and
+  // the unread badge cannot drift from the list.
+  const markAllRead = useMarkAllNotificationsRead();
+  const markRead = useMarkNotificationRead();
 
   const notifications = data?.data ?? [];
 

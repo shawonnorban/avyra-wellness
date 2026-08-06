@@ -912,23 +912,53 @@ export function useSavePermission() {
 
 /* ---------- Notifications ---------- */
 
+export type AdminNotification = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
 export function useNotifications() {
   return useQuery({
     queryKey: ["admin", "notifications"],
     queryFn: async () => {
-      const { data } = await api.get<
-        Paginated<{
-          id: string;
-          type: string;
-          title: string;
-          message: string;
-          link: string | null;
-          is_read: boolean;
-          created_at: string;
-        }> & { unread_count: number }
-      >("/admin/notifications");
+      const { data } = await api.get<Paginated<AdminNotification> & { unread_count: number }>(
+        "/admin/notifications",
+      );
       return data;
     },
-    refetchInterval: 60_000,
+    // Half a minute: this is also what decides how soon a new order announces
+    // itself, so it trades a little polling for the alert being worth having.
+    refetchInterval: 30_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.patch(`/admin/notifications/${id}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await api.post("/admin/notifications/read-all");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
+    },
   });
 }
