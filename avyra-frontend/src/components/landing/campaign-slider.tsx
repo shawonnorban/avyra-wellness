@@ -48,19 +48,23 @@ export function CampaignSlider({
 
   return (
     <div className="lp-slider">
-      {images.map((src, i) => (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          key={src}
-          src={src}
-          alt={i === current ? alt : ""}
-          className={`lp-slide ${i === current ? "on" : ""}`}
-          // Only the first slide is worth blocking render for.
-          loading={i === 0 ? "eager" : "lazy"}
-          aria-hidden={i !== current}
-        />
-      ))}
+      <div className="lp-slider-frame">
+        {images.map((src, i) => (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            key={src}
+            src={src}
+            alt={i === current ? alt : ""}
+            className={`lp-slide ${i === current ? "on" : ""}`}
+            // Only the first slide is worth blocking render for.
+            loading={i === 0 ? "eager" : "lazy"}
+            aria-hidden={i !== current}
+          />
+        ))}
+      </div>
 
+      {/* Outside the frame on purpose: over the artwork they would sit on top of
+          whatever the designer put along the bottom edge. */}
       {count > 1 && (
         <div className="lp-slider-dots" role="tablist" aria-label="ছবি নির্বাচন">
           {images.map((src, i) => (

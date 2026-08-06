@@ -1429,9 +1429,14 @@
 }
 
 
-/* Copy beside the order form. */
-/* `stretch` rather than `start`: the image column is meant to run the full height
-   of the order form beside it, however tall the form's variant list makes it. */
+/*
+ * Copy beside the order form.
+ *
+ * The artwork sets the height — its aspect ratio is what stops the logo and the
+ * claims being cropped — and the order form stretches to meet it, so the two
+ * columns end level. Cropping is no longer the price of that: the slide is
+ * `contain`ed, so a taller frame only means more room around the image.
+ */
 .lp .lp-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1439,58 +1444,81 @@
   align-items: stretch;
 }
 
+/*
+ * The form is an unclassed <form>; a flex column with the body growing keeps its
+ * white panel running the full height instead of stopping partway and leaving
+ * the page background beside the artwork.
+ */
+.lp .lp-split > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.lp .lp-split > form > .form-body { flex: 1; }
+
+/* Plain wrapper — the frame and the dots below it are sized by the slider. */
 .lp .lp-split-media {
   position: relative;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  box-shadow: var(--s2);
+  display: flex;
+}
+
+/* ── Campaign slider ── */
+
+/*
+ * Portrait, because campaign creatives are: the frame is shaped roughly like the
+ * artwork, so `contain` has almost nothing to letterbox. The aspect ratio is what
+ * gives the panel its height now — it no longer borrows the order form's, which
+ * is what used to crop the logo off the top and the claims off the bottom.
+ */
+.lp .lp-slider {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 /*
- * Taken out of flow, so the photo's intrinsic height contributes nothing to the
- * grid row: the order form alone sets the row height and the image is cropped to
- * fill it. Stretching a normal-flow <img> is not enough — whichever column is
- * naturally taller wins the row, which is why the photo used to overhang.
+ * `flex: 1` on top of the ratio: the ratio is the natural size, and it is
+ * normally the taller column so it wins the row. Should the form ever be taller
+ * — a long variant list — the frame absorbs the difference instead of leaving a
+ * gap under the image, and `contain` means that costs nothing but margin.
  */
-.lp .lp-split-media img {
+.lp .lp-slider-frame {
+  position: relative;
+  flex: 1;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--s2);
+  background: var(--surface);
+}
+
+/*
+ * Stacked and cross-faded, so nothing reflows on a change.
+ *
+ * `contain`, not `cover`: an admin can upload any shape and the whole image has
+ * to stay readable — a cropped edge loses the branding or the claims.
+ */
+.lp .lp-slide {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
-}
-
-/* ── Slider inside the media panel ──
-   Fills the panel exactly, so it inherits the height the order form sets. */
-.lp .lp-slider {
-  position: absolute;
-  inset: 0;
-}
-
-/*
- * All slides are stacked and only opacity changes, so nothing reflows on a
- * change — the panel keeps the order form's height throughout. `.lp-split-media
- * img` already positions them; only the fade belongs here.
- */
-.lp .lp-slide {
   opacity: 0;
   transition: opacity 0.9s ease-in-out;
-  /* Out of the way of the dots when hidden, so a stale slide cannot take a tap. */
   pointer-events: none;
 }
 
 .lp .lp-slide.on { opacity: 1; }
 
+/* Below the frame, not over it — see the note in campaign-slider.tsx. */
 .lp .lp-slider-dots {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 14px;
   display: flex;
   justify-content: center;
   gap: 8px;
-  z-index: 1;
+  margin-top: 12px;
 }
 
 .lp .lp-slider-dot {
@@ -1500,18 +1528,17 @@
   border-radius: 50%;
   border: none;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  background: var(--border-2);
   transition: background 0.25s ease, transform 0.25s ease;
 }
 
 .lp .lp-slider-dot.on {
-  background: #fff;
+  background: var(--red);
   transform: scale(1.25);
 }
 
 .lp .lp-slider-dot:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--red);
   outline-offset: 2px;
 }
 
@@ -1773,10 +1800,9 @@
   .lp .form-two-col { grid-template-columns: 1fr; gap: 24px; }
   .lp .prefooter-features { gap: 28px; }
 
-  /* Stacked, there is no form beside the photo to take its height from, so give
-     the (absolutely positioned) image a shape of its own. */
+  /* Stacked. The frame keeps its portrait shape here too — a landscape one would
+     shrink a portrait creative to a band across the middle of the screen. */
   .lp .lp-split { grid-template-columns: 1fr; gap: 24px; }
-  .lp .lp-split-media { aspect-ratio: 4 / 3; }
   .lp .lp-card-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
