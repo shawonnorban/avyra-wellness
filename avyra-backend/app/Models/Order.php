@@ -21,7 +21,7 @@ class Order extends Model
         'fbclid', 'fbc', 'fbp', 'utm_source', 'utm_medium', 'utm_campaign',
         'utm_term', 'utm_content', 'utm_id', 'landing_url', 'referrer',
         'ip_address', 'user_agent', 'device_fingerprint', 'lazychat_order_id',
-        'created_by', 'fb_events_sent',
+        'created_by', 'fb_events_sent', 'fb_event_ids',
     ];
 
     protected $casts = [
@@ -32,6 +32,7 @@ class Order extends Model
         'order_date' => 'date',
         'status' => OrderStatus::class,
         'fb_events_sent' => 'array',
+        'fb_event_ids' => 'array',
     ];
 
     protected static function booted(): void

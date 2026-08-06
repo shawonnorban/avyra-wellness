@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useState } from "react";
@@ -57,9 +58,15 @@ export default function AdminCustomersPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{data?.total ?? 0} total</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{data?.total ?? 0} total</p>
+        </div>
+
+        <Link href="/admin/customers/segments" className="text-sm text-primary hover:underline">
+          Segments for Lookalike Audiences →
+        </Link>
       </div>
 
       {stats && (

@@ -126,42 +126,61 @@ would silently send nothing.
 
 ## Facebook Pixel + Conversions API
 
-Three statuses convert; the other three send **nothing**:
+**The browser half runs through GTM, not code.** The Pixel base snippet is a tag inside container
+`GTM-T78PFPTT`; `components/gtm.tsx` only installs the container and `lib/gtm.ts` pushes events.
+Never add a second Pixel snippet — two `fbq('init')` calls double-count everything.
 
-| Status | Event | Value |
-|---|---|---|
-| `pending` | `Lead` | — |
-| `confirm` | `Purchase` | order total |
-| `cancel` | `Cancel` (custom) | — |
+Five events, three of them from an order status:
 
-The mapping sits one stage earlier than Facebook's own funnel naming, to suit cash on delivery: a
-submitted order is a `Lead`, and `Purchase` fires when an admin confirms it by phone rather than on
-delivery. That reports money for orders that may still fail to deliver, in exchange for a signal the
-algorithm gets in hours instead of days. **`delivered` therefore sends nothing** — the Purchase has
-already gone.
+| Trigger | Event | Fired by | Value |
+|---|---|---|---|
+| Product page viewed | `ViewContent` | browser | — |
+| Order button pressed | `InitiateCheckout` | browser | — |
+| `pending` (form submitted) | `Lead` | browser + server | — |
+| `confirm` | `Purchase` | server | order total |
+| `delivered` | `DeliveredPurchase` (custom) | server | order total |
 
-`Cancel` is **not a Meta standard event**; it goes as a custom event, so it needs a Custom Conversion
-before it can drive optimisation, and it does not retract the `Purchase` already sent at `confirm`.
+`hold`, `fake` and `cancel` send **nothing** — internal judgements, not conversions. A cancellation
+does not retract a `Purchase` already sent; that needs Meta's value-adjustment API, out of scope.
+
+The mapping sits one stage earlier than Meta's own funnel naming, to suit cash on delivery: `Purchase`
+fires at phone confirmation rather than delivery, so the algorithm gets the signal in hours instead of
+days, at the cost of reporting money for orders that may still fail. `DeliveredPurchase` closes the
+loop and, being custom, needs a Custom Conversion before it can drive optimisation.
+
+`ViewContent` and `InitiateCheckout` are browser-only: they happen before an order exists, so there is
+nothing to carry an `event_id` and no server copy to deduplicate against.
+
+Full setup notes for the media buyer live in `docs/meta-tracking-handover.md`.
 
 `App\Observers\OrderObserver` is the **single trigger point** — hooking the admin controller would
 have missed the courier webhook and `courier:sync`, and hooking all three would have double-sent.
 
-- **Dedup** lives in `orders.fb_events_sent`, written only *after* Facebook accepts the call, so a
-  failure leaves the event still owed. `event_id` is `{order_number}-{EventName}`, which the browser
-  pixel reproduces — hence the id is built from the order number, not the uuid the client never sees.
+- **Send-once** lives in `orders.fb_events_sent`, written only *after* Meta accepts the call, so a
+  failure leaves the event still owed.
+- **Dedup** uses `orders.fb_event_ids` — the `event_id` is generated once, stored, and handed to the
+  browser in the checkout response so the GTM tag can put it in the Pixel tag's Event ID field. It is
+  deliberately **not** derived from the order number any more: a media buyer wires the browser tag up
+  by hand, and a formula both sides must reproduce is exactly what drifts.
 - **Failures** land in `fb_event_logs` with the payload; `php artisan fb:retry-events` (hourly)
   replays them verbatim, up to 5 attempts. Tracking never fails an order update.
 - **Match quality**: `ip_address` and `user_agent` are captured at checkout from the connection and
-  reused for the later Purchase and Cancel, which have no browser. Phone is normalised to `8801…`
-  before hashing — the local `01…` form matches nothing.
+  reused for the later Purchase and DeliveredPurchase, which have no browser. Phone is normalised to
+  `8801…` before hashing — the local `01…` form matches nothing.
 - **`fbc` persistence**: `lib/attribution.ts` writes `fb.1.<click ts>.<fbclid>` to *localStorage* on
   arrival (the rest of the attribution is sessionStorage). The timestamp must be the click, so it
   cannot be built at checkout.
-- The pixel mounts on `/lp/[slug]` and `/avyravitalplus` only — never the storefront or admin, which
-  is also why a second `init` cannot double-count.
-- `FB_ACCESS_TOKEN` is server-side only. Blank credentials disable sending; nothing else breaks.
+- `FB_ACCESS_TOKEN` is server-side only. Blank credentials disable sending; nothing else breaks, and
+  a blank `NEXT_PUBLIC_GTM_ID` likewise disables the browser half.
 
-Returns after a `Purchase` do not retract it — Meta's value-adjustment API is out of scope for now.
+## Customer segments
+
+Six lists behind Meta Lookalike Audiences, at **Admin → Customers → Segments**: delivered, repeat
+(2+ delivered), confirmed-not-delivered, cancelled, returned, invalid/fake.
+
+`CustomerSegmentService` derives them from `orders` on every request rather than storing them — a
+saved list goes stale the moment a status changes or a parcel comes back. The CSV export writes
+**plain phone numbers**: Ads Manager hashes on upload, so pre-hashing stops them matching.
 
 ## Images are uploaded, never linked
 

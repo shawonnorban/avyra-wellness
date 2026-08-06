@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Anek_Bangla, Rethink_Sans, Sora } from "next/font/google";
+import { GoogleTagManager } from "@/components/gtm";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -63,6 +64,9 @@ export default function RootLayout({
       className={`${rethinkSans.variable} ${anekBangla.variable} ${sora.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* Tag manager first, so the noscript iframe sits immediately after
+            <body> as Google's install instructions require. */}
+        <GoogleTagManager />
         <Providers>{children}</Providers>
       </body>
     </html>

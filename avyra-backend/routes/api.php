@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\CourierController as AdminCourierController;
 use App\Http\Controllers\Api\Admin\CustomerController as AdminCustomerController;
+use App\Http\Controllers\Api\Admin\CustomerSegmentController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\FraudController;
 use App\Http\Controllers\Api\Admin\LandingPageController as AdminLandingPageController;
@@ -103,6 +104,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:employee'])->group(fun
     Route::delete('orders/{order}', [AdminOrderController::class, 'destroy'])->middleware('module:sales,delete');
 
     // Customers
+    // Before the {customer} routes, or "segments" is read as a customer id.
+    Route::get('customers/segments', [CustomerSegmentController::class, 'index'])->middleware('module:customers,view');
+    Route::get('customers/segments/{segment}', [CustomerSegmentController::class, 'show'])->middleware('module:customers,view');
+    Route::get('customers/segments/{segment}/export', [CustomerSegmentController::class, 'export'])->middleware('module:customers,view');
+
     Route::get('customers/stats', [AdminCustomerController::class, 'stats'])->middleware('module:customers,view');
     Route::get('customers', [AdminCustomerController::class, 'index'])->middleware('module:customers,view');
     Route::get('customers/{customer}', [AdminCustomerController::class, 'show'])->middleware('module:customers,view');

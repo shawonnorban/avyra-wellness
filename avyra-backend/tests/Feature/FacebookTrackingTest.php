@@ -6,6 +6,8 @@ use App\Enums\OrderStatus;
 use App\Models\FbEventLog;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Setting;
+use App\Services\Facebook\BrowserTrackingPayload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -77,47 +79,53 @@ class FacebookTrackingTest extends TestCase
         $this->assertTrue($order->fresh()->fb_events_sent['lead']);
     }
 
-    public function test_confirming_sends_purchase_with_the_value_and_delivering_adds_nothing(): void
+    public function test_the_funnel_fires_lead_then_purchase_then_delivered_purchase(): void
     {
         $order = $this->order();
 
         $order->update(['status' => OrderStatus::Confirm]);
-        // Purchase already went at confirm; a second one here would count the
-        // same order's money twice.
         $order->update(['status' => OrderStatus::Delivered]);
 
         $events = $this->sentEvents();
-        $names = array_column($events, 'event_name');
 
-        $this->assertSame(['Lead', 'Purchase'], $names);
+        $this->assertSame(
+            ['Lead', 'Purchase', 'DeliveredPurchase'],
+            array_column($events, 'event_name'),
+        );
 
-        // Only Purchase carries money; a value on Lead would double-count revenue.
+        // Only the money events carry a value; one on Lead would count the same
+        // order's revenue at two stages of the funnel.
         $this->assertArrayNotHasKey('value', $events[0]['custom_data']);
         $this->assertSame(1500.0, $events[1]['custom_data']['value']);
+        $this->assertSame(1500.0, $events[2]['custom_data']['value']);
         $this->assertSame('BDT', $events[1]['custom_data']['currency']);
+
+        // The brief asks for order_id on every event.
+        $this->assertSame($order->order_number, $events[1]['custom_data']['order_id']);
     }
 
-    public function test_cancelling_sends_a_valueless_cancel_event(): void
+    public function test_cancelling_sends_nothing_and_does_not_retract_the_purchase(): void
     {
         $order = $this->order();
+        $order->update(['status' => OrderStatus::Confirm]);
 
+        $before = count($this->sentEvents());
         $order->update(['status' => OrderStatus::Cancel]);
 
-        $events = $this->sentEvents();
-
-        $this->assertSame(['Lead', 'Cancel'], array_column($events, 'event_name'));
-        $this->assertArrayNotHasKey('value', $events[1]['custom_data']);
-        $this->assertTrue($order->fresh()->fb_events_sent['cancel']);
+        // A cancellation is an internal judgement, not a conversion. It also does
+        // not take back the Purchase already reported — that needs Meta's
+        // value-adjustment API, which is out of scope.
+        $this->assertCount($before, $this->sentEvents());
     }
 
-    public function test_hold_fake_and_delivered_send_nothing(): void
+    public function test_hold_fake_and_cancel_send_nothing(): void
     {
         // Created straight into `hold` so the Lead of a normal checkout does not
         // muddy the count.
         $order = $this->order(['status' => OrderStatus::Hold]);
 
         $order->update(['status' => OrderStatus::Fake]);
-        $order->update(['status' => OrderStatus::Delivered]);
+        $order->update(['status' => OrderStatus::Cancel]);
 
         Http::assertNothingSent();
         $this->assertNull($order->fresh()->fb_events_sent);
@@ -152,14 +160,17 @@ class FacebookTrackingTest extends TestCase
         $this->assertStringNotContainsString('01712345678', json_encode($this->sentEvents()));
     }
 
-    public function test_the_event_id_lets_facebook_deduplicate_against_the_pixel(): void
+    public function test_the_event_id_is_stored_so_the_browser_can_send_the_same_one(): void
     {
         $order = $this->order();
 
-        $this->assertSame(
-            "{$order->order_number}-Lead",
-            $this->sentEvents()[0]['event_id'],
-        );
+        $sent = $this->sentEvents()[0]['event_id'];
+        $stored = $order->fresh()->fb_event_ids['lead'];
+
+        // Stored rather than derived: the browser half is fired by a GTM tag a
+        // media buyer wires up, so the id has to be handed over as a value.
+        $this->assertSame($stored, $sent);
+        $this->assertStringStartsWith('Lead.' . $order->order_number, $sent);
     }
 
     public function test_a_failed_call_is_logged_and_the_flag_is_not_set(): void
@@ -261,5 +272,60 @@ class FacebookTrackingTest extends TestCase
         $this->assertNotNull($order->ip_address);
         $this->assertSame('fb.1.1700000000.click', $order->fbc);
         $this->assertSame('fb.1.1700000000.browser', $order->fbp);
+    }
+public function test_checkout_hands_the_browser_the_same_event_id_it_sends(): void
+    {
+        $order = $this->order();
+
+        $payload = app(BrowserTrackingPayload::class)->leadPayload($order);
+
+        // The whole point of the handover: Meta only collapses the browser and
+        // server copies into one conversion when these match exactly.
+        $this->assertSame('Lead', $payload['event_name']);
+        $this->assertSame($this->sentEvents()[0]['event_id'], $payload['event_id']);
+        $this->assertSame($order->order_number, $payload['order_id']);
+
+        // No value on Lead — the browser must not claim revenue the server does not.
+        $this->assertArrayNotHasKey('value', $payload);
+    }
+public function test_the_settings_panel_overrides_the_env_credentials(): void
+    {
+        Setting::put('meta_capi', [
+            'enabled' => true,
+            'pixel_id' => 'PANEL-PIXEL',
+            'access_token' => 'panel-token',
+            'test_event_code' => 'TEST123',
+        ]);
+
+        $this->order();
+
+        $urls = collect(Http::recorded())->map(fn ($pair) => (string) $pair[0]->url());
+
+        // The panel wins so staff can rotate a token without a deploy; without
+        // this the tab looked editable but changed nothing.
+        $this->assertTrue($urls->every(fn ($url) => str_contains($url, 'PANEL-PIXEL')));
+        $this->assertSame('TEST123', $this->sentPayloads()[0]['test_event_code'] ?? null);
+    }
+
+    public function test_the_env_is_used_while_the_panel_switch_is_off(): void
+    {
+        Setting::put('meta_capi', [
+            'enabled' => false,
+            'pixel_id' => 'PANEL-PIXEL',
+            'access_token' => 'panel-token',
+            'test_event_code' => '',
+        ]);
+
+        $this->order();
+
+        $urls = collect(Http::recorded())->map(fn ($pair) => (string) $pair[0]->url());
+
+        $this->assertTrue($urls->every(fn ($url) => ! str_contains($url, 'PANEL-PIXEL')));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function sentPayloads(): array
+    {
+        return collect(Http::recorded())->map(fn ($pair) => $pair[0]->data())->all();
     }
 }

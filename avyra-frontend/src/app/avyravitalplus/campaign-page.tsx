@@ -11,8 +11,8 @@ import {
   HomeProductShowcase,
   HomeReconnect,
 } from "@/components/avyra/home-sections";
-import { FacebookPixel } from "@/components/facebook-pixel";
 import { LanguageLock } from "@/components/language-provider";
+import { ViewContentTracker } from "@/components/view-content-tracker";
 import { CampaignSlider } from "@/components/landing/campaign-slider";
 import { LpTopHeader, Reveal, ScrollTopButton } from "@/components/landing/landing-chrome";
 import { CampaignOrderForm } from "@/components/landing/landing-order-form";
@@ -53,9 +53,12 @@ export function CampaignPage() {
        `lp-bn` applies the Bengali face without touching html[lang]. */
     <LanguageLock lang="bn">
     <div className="lp lp-wide lp-bn">
-      {/* Ad traffic lands here, so this is one of the two pages that carry the
-          pixel. The storefront and admin deliberately do not. */}
-      <FacebookPixel />
+      <ViewContentTracker
+        productId={product?.id}
+        productName={product?.name}
+        value={product?.price}
+      />
+
 
       <LpTopHeader
         logo="/avyra/lp-logo.png"

@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { toApiError } from "@/lib/api";
 import { getAttribution } from "@/lib/attribution";
-import { trackPixelEvent } from "@/components/facebook-pixel";
+import { pushEvent } from "@/lib/gtm";
 import { getDeviceFingerprint } from "@/lib/fingerprint";
 import { formatTaka, isValidBdPhone, normalizePhone } from "@/lib/format";
 import {
@@ -126,6 +126,17 @@ export function CampaignOrderForm({
       return;
     }
 
+    // Intent, before the order exists — so there is no order to carry an
+    // event_id and no server-side twin to deduplicate against. Browser only.
+    pushEvent("InitiateCheckout", {
+      currency: "BDT",
+      value: total,
+      content_type: "product",
+      content_ids: [product.id],
+      content_name: product.name,
+      num_items: quantity,
+    });
+
     try {
       const order = await placeOrder.mutateAsync({
         customer_name: form.customer_name,
@@ -141,18 +152,12 @@ export function CampaignOrderForm({
         ...getAttribution(),
       });
 
-      // The browser half of the conversion. A submitted order is a Lead; the
-      // Purchase follows server-side when an admin confirms it. The server sends
-      // this same event with the same id, so Facebook counts one Lead rather
-      // than two — and it still lands if the server call is the one that fails.
-      //
-      // No `value`: only Purchase reports money, and a value here would have the
-      // browser claiming revenue the server copy does not.
-      trackPixelEvent("Lead", `${order.order_number}-Lead`, {
-        content_type: "product",
-        content_ids: [product.id],
-        content_name: product.name,
-      });
+      // The browser half of the Lead. The payload — including the `event_id` —
+      // comes straight from the API, which generated and stored it; the server
+      // sends the identical id, so Meta counts one conversion rather than two.
+      // Deriving the id here instead would put a formula on both sides that has
+      // to stay in step forever.
+      if (order.tracking) pushEvent("Lead", order.tracking);
 
       if (trackingSlug) trackLandingEvent(trackingSlug, "order");
       router.push(`/order-success?order=${encodeURIComponent(order.order_number)}`);

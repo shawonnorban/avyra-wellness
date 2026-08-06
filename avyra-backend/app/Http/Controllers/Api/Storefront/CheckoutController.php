@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCheckoutRequest;
 use App\Models\Coupon;
 use App\Models\Setting;
 use App\Services\CheckoutService;
+use App\Services\Facebook\BrowserTrackingPayload;
 use App\Services\Fraud\FraudDetectionService;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,7 @@ class CheckoutController extends Controller
         private readonly CheckoutService $checkout,
         private readonly FraudDetectionService $fraud,
         private readonly OtpService $otp,
+        private readonly BrowserTrackingPayload $tracking,
     ) {}
 
     public function store(StoreCheckoutRequest $request): JsonResponse
@@ -75,6 +77,12 @@ class CheckoutController extends Controller
                     'quantity' => $i->quantity,
                     'unit_price' => (float) $i->unit_price,
                 ]),
+                // Everything the browser needs to fire its half of the Lead, with
+                // the same event_id the server used. Handed over rather than
+                // recomputed on the client: the browser tag is configured in GTM
+                // by hand, and a formula both sides must reproduce is exactly what
+                // breaks deduplication.
+                'tracking' => $this->tracking->leadPayload($order),
             ],
         ], 201);
     }

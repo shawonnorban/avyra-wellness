@@ -2,10 +2,10 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { AvyraFooter } from "@/components/avyra/avyra-footer";
-import { FacebookPixel } from "@/components/facebook-pixel";
 import { Lightbox, LpTopHeader, Reveal, TrustStrip } from "@/components/landing/landing-chrome";
 import { LandingOrderForm } from "@/components/landing/landing-order-form";
 import { SectionRenderer } from "@/components/landing/section-renderer";
+import { ViewContentTracker } from "@/components/view-content-tracker";
 import { getAttribution } from "@/lib/attribution";
 import { trackLandingEvent, useLandingPage, useStorefrontSettings } from "@/lib/queries";
 import "../landing.css";
@@ -100,9 +100,11 @@ export default function LandingPageView({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="lp">
-      {/* Ad traffic lands here, so this is one of the two pages that carry the
-          pixel. The storefront and admin deliberately do not. */}
-      <FacebookPixel />
+      <ViewContentTracker
+        productId={page.product?.id}
+        productName={page.product?.name}
+        value={page.product?.price}
+      />
 
       <LpTopHeader
         logo="/avyra/lp-logo.png"

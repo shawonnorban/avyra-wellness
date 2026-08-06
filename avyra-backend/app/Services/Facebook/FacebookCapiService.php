@@ -4,8 +4,10 @@ namespace App\Services\Facebook;
 
 use App\Models\FbEventLog;
 use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -13,9 +15,9 @@ use Throwable;
  *
  * Server-side rather than browser-side on purpose: the event that matters most
  * (Purchase) fires when an admin confirms the order by phone hours later, with
- * no browser involved. The browser pixel still fires PageView and its own Lead
- * at checkout; both sides send the same `event_id`, so Facebook deduplicates the
- * pair instead of counting it twice.
+ * no browser involved. The browser half — ViewContent, InitiateCheckout and its
+ * own copy of Lead — runs through GTM; both sides send the same `event_id`, so
+ * Meta deduplicates the pair instead of counting it twice.
  */
 class FacebookCapiService
 {
@@ -23,11 +25,45 @@ class FacebookCapiService
     {
     }
 
+    /**
+     * Where the credentials come from.
+     *
+     * Settings → Meta CAPI wins when it is switched on *and* filled in, so staff
+     * can rotate a token without a deploy. Anything else falls back to the `.env`,
+     * which keeps a deployment that never opened the panel working — and is still
+     * the safer home for a token, since it never reaches the database.
+     *
+     * @return array{pixel_id: ?string, access_token: ?string, test_event_code: ?string}
+     */
+    private function credentials(): array
+    {
+        $stored = Setting::get('meta_capi', []) ?: [];
+
+        $panelReady = ! empty($stored['enabled'])
+            && filled($stored['pixel_id'] ?? null)
+            && filled($stored['access_token'] ?? null);
+
+        if ($panelReady) {
+            return [
+                'pixel_id' => $stored['pixel_id'],
+                'access_token' => $stored['access_token'],
+                'test_event_code' => $stored['test_event_code'] ?: null,
+            ];
+        }
+
+        return [
+            'pixel_id' => config('services.facebook.pixel_id'),
+            'access_token' => config('services.facebook.access_token'),
+            'test_event_code' => config('services.facebook.test_event_code'),
+        ];
+    }
+
     /** Credentials missing means tracking is simply off, not broken. */
     public function isConfigured(): bool
     {
-        return filled(config('services.facebook.pixel_id'))
-            && filled(config('services.facebook.access_token'));
+        $credentials = $this->credentials();
+
+        return filled($credentials['pixel_id']) && filled($credentials['access_token']);
     }
 
     /**
@@ -84,10 +120,32 @@ class FacebookCapiService
     }
 
     /**
-     * The event id is derived from the order and event name rather than being
-     * random, so a retry — and the browser pixel firing the same conversion —
-     * resolve to one event on Facebook's side instead of several.
+     * Returns the stored event id for this conversion, generating and saving one
+     * the first time it is asked for.
+     *
+     * Stored rather than recomputed because the browser half is fired by a GTM
+     * tag a media buyer configures by hand: the id has to be handed over as a
+     * value, not as a formula both sides are trusted to reproduce. A retry then
+     * reuses the same id and Meta still collapses the pair into one conversion.
      */
+    public function eventIdFor(Order $order, string $key): string
+    {
+        if ($existing = $order->fb_event_ids[$key] ?? null) {
+            return $existing;
+        }
+
+        $eventId = FacebookEventMap::EVENT_NAMES[$key] . '.' . $order->order_number . '.' . Str::random(8);
+
+        $ids = $order->fb_event_ids ?? [];
+        $ids[$key] = $eventId;
+
+        // Written straight to the column: an in-memory copy elsewhere must not
+        // clobber an id another request has already handed to a browser.
+        $order->forceFill(['fb_event_ids' => $ids])->saveQuietly();
+
+        return $eventId;
+    }
+
     public function buildPayload(Order $order, string $key): array
     {
         $eventName = FacebookEventMap::EVENT_NAMES[$key];
@@ -95,10 +153,13 @@ class FacebookCapiService
         $customData = [
             'currency' => config('services.facebook.currency', 'BDT'),
             'content_type' => 'product',
+            // Meta has no top-level order_id; it belongs in custom_data, where it
+            // also gives Ads Manager something to reconcile against.
+            'order_id' => $order->order_number,
         ];
 
-        // Only Purchase reports money. Sending a value on Lead would inflate
-        // reported revenue by counting the same order at two stages.
+        // Only the money events report a value. A value on Lead would count the
+        // same order's revenue at two stages of the funnel.
         if (FacebookEventMap::carriesValue($key)) {
             $customData['value'] = (float) $order->total;
         }
@@ -116,10 +177,7 @@ class FacebookCapiService
                 [
                     'event_name' => $eventName,
                     'event_time' => $this->eventTime($order),
-                    // Built from the order number, not the uuid: the browser has
-                    // to derive the identical id to be deduplicated against, and
-                    // the order number is the only one it is given.
-                    'event_id' => "{$order->order_number}-{$eventName}",
+                    'event_id' => $this->eventIdFor($order, $key),
                     'action_source' => 'website',
                     'event_source_url' => $order->landing_url ?: null,
                     'user_data' => array_filter([
@@ -144,7 +202,7 @@ class FacebookCapiService
             ],
         ];
 
-        if (filled($code = config('services.facebook.test_event_code'))) {
+        if (filled($code = $this->credentials()['test_event_code'])) {
             $payload['test_event_code'] = $code;
         }
 
@@ -168,12 +226,13 @@ class FacebookCapiService
     private function post(array $payload): array
     {
         $version = config('services.facebook.api_version', 'v20.0');
-        $pixelId = config('services.facebook.pixel_id');
+        $credentials = $this->credentials();
+        $pixelId = $credentials['pixel_id'];
 
         $response = Http::asJson()
             ->timeout(10)
             ->post("https://graph.facebook.com/{$version}/{$pixelId}/events", $payload + [
-                'access_token' => config('services.facebook.access_token'),
+                'access_token' => $credentials['access_token'],
             ]);
 
         if ($response->successful()) {

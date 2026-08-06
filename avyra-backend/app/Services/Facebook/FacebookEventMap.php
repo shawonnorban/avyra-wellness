@@ -5,55 +5,64 @@ namespace App\Services\Facebook;
 use App\Enums\OrderStatus;
 
 /**
- * The single source of truth for which order status produces which Facebook
- * event. Three statuses do; the other three send nothing at all.
+ * The single source of truth for which order status produces which Meta event.
  *
- * The mapping sits one stage earlier than Facebook's own funnel naming, to suit
- * cash on delivery: a submitted order is a `Lead`, and the `Purchase` fires when
- * an admin confirms it on the phone rather than when the parcel arrives. That
- * trades accuracy for speed — money is reported for orders that may still fail
- * to deliver — in exchange for a signal the algorithm gets in hours, not days.
+ * The funnel is shifted one stage earlier than Meta's own naming, to suit cash on
+ * delivery: a submitted order is a `Lead`, and `Purchase` fires when an admin
+ * confirms it on the phone rather than when the parcel arrives. That reports
+ * money for orders that may still fail to deliver, in exchange for a signal the
+ * algorithm gets in hours instead of days. `DeliveredPurchase` closes the loop
+ * once the money is actually collected.
  *
- * `Cancel` is **not** a Facebook standard event; it goes as a custom event. It
- * will not sit alongside the standard events in Events Manager and cannot drive
- * standard-event optimisation until a Custom Conversion is built on it. Nor
- * does it retract the `Purchase` already sent at `confirm`: that needs Meta's
- * value-adjustment API, which stays out of scope.
+ * `hold`, `fake` and `cancel` send **nothing**. They are internal judgements, not
+ * conversions; a cancelled order that had already reported a `Purchase` is not
+ * retracted here either — that needs Meta's value-adjustment API, which is out
+ * of scope. Those orders are still tagged in the database and appear in the
+ * customer segments.
  *
- * The array keys double as the dedup keys stored in `orders.fb_events_sent`.
+ * Two more events exist that no order status produces, because they happen
+ * before an order does — `ViewContent` and `InitiateCheckout` are browser-only,
+ * fired through GTM.
+ *
+ * The array keys double as the dedup keys stored in `orders.fb_events_sent` and
+ * as the keys of `orders.fb_event_ids`.
  */
 final class FacebookEventMap
 {
     public const LEAD = 'lead';
     public const PURCHASE = 'purchase';
-    public const CANCEL = 'cancel';
+    public const DELIVERED_PURCHASE = 'deliveredPurchase';
 
-    /** dedup key => Facebook event name */
+    /** dedup key => Meta event name */
     public const EVENT_NAMES = [
         self::LEAD => 'Lead',
         self::PURCHASE => 'Purchase',
-        self::CANCEL => 'Cancel',
+        // Custom, not a Meta standard event: it needs a Custom Conversion in Ads
+        // Manager before it can drive optimisation.
+        self::DELIVERED_PURCHASE => 'DeliveredPurchase',
     ];
 
     /**
      * The dedup key a status should fire, or null when the status is internal.
-     *
-     * `delivered` sends nothing: the Purchase already went at `confirm`, and a
-     * second one would count the same order's money twice.
      */
     public static function keyFor(OrderStatus $status): ?string
     {
         return match ($status) {
             OrderStatus::Pending => self::LEAD,
             OrderStatus::Confirm => self::PURCHASE,
-            OrderStatus::Cancel => self::CANCEL,
-            OrderStatus::Hold, OrderStatus::Fake, OrderStatus::Delivered => null,
+            OrderStatus::Delivered => self::DELIVERED_PURCHASE,
+            OrderStatus::Hold, OrderStatus::Fake, OrderStatus::Cancel => null,
         };
     }
 
-    /** Only Purchase reports money; Lead and Cancel are signals. */
+    /**
+     * Which events report money.
+     *
+     * `Lead` deliberately does not: the same order would otherwise be counted at
+     * two stages and inflate reported revenue.
+     */
     public static function carriesValue(string $key): bool
     {
-        return $key === self::PURCHASE;
+        return in_array($key, [self::PURCHASE, self::DELIVERED_PURCHASE], true);
     }
 }

@@ -192,6 +192,21 @@ export type PlacedOrder = {
     quantity: number;
     unit_price: number;
   }[];
+  /**
+   * Ready to push onto the GTM dataLayer as the browser half of the Lead.
+   * `event_id` is generated and stored server-side; the CAPI call sends the same
+   * one, which is what lets Meta deduplicate the pair.
+   */
+  tracking?: {
+    event_name: string;
+    event_id: string;
+    order_id: string;
+    currency: string;
+    content_type: string;
+    content_ids: string[];
+    content_name: string;
+    num_items: number;
+  };
 };
 
 export type TrackedOrder = {

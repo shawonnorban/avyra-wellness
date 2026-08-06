@@ -7,6 +7,7 @@ import { use, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/components/language-provider";
 import { formatTaka } from "@/lib/format";
+import { ViewContentTracker } from "@/components/view-content-tracker";
 import { useProduct } from "@/lib/queries";
 import type { ProductVariant } from "@/lib/types";
 import { useCart } from "@/store/cart";
@@ -88,6 +89,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="bg-white min-h-screen">
+      <ViewContentTracker
+        productId={product.id}
+        productName={product.name}
+        value={product.price}
+      />
+
       <div className="max-w-5xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
           {/* Left: images */}
