@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, Loader2, Package, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Field, Input, Textarea } from "@/components/ui/field";
 import { toApiError, type ApiErrorShape } from "@/lib/api";
 import { getAttribution } from "@/lib/attribution";
 import { getDeviceFingerprint } from "@/lib/fingerprint";
+import { pushEvent } from "@/lib/gtm";
 import { formatTaka, isValidBdPhone, normalizePhone } from "@/lib/format";
 import {
   usePlaceOrder,
@@ -77,6 +78,25 @@ export default function CheckoutPage() {
 
   const discount = coupon?.discount ?? 0;
   const total = Math.max(0, subtotal - discount) + deliveryCharge - deliveryDiscount;
+
+  // Reaching this page with a cart *is* initiating checkout — the storefront's
+  // equivalent of the campaign pages' order CTA. Ref-guarded so a settings
+  // refetch or a coupon keystroke cannot re-report it.
+  const initiated = useRef(false);
+
+  useEffect(() => {
+    if (initiated.current || lines.length === 0) return;
+
+    initiated.current = true;
+
+    pushEvent("InitiateCheckout", {
+      currency: "BDT",
+      value: subtotal,
+      content_type: "product",
+      content_ids: lines.map((line) => line.productId),
+      num_items: lines.reduce((sum, line) => sum + line.quantity, 0),
+    });
+  }, [lines, subtotal]);
 
   const availableWallets = WALLETS.filter((w) => Boolean(settings?.payment?.[w.field]));
   const activeWallet = WALLETS.find((w) => w.id === paymentMethod);
@@ -170,6 +190,11 @@ export default function CheckoutPage() {
         device_fingerprint: getDeviceFingerprint(),
         ...getAttribution(),
       });
+
+      // The browser half of the Lead, with the `event_id` the API generated and
+      // stored — the server sends the identical id, so Meta collapses the two
+      // copies into one conversion instead of counting a cart order twice.
+      if (order.tracking) pushEvent("Lead", order.tracking);
 
       clear();
       toast.success(t("checkout.orderSuccessToast"));

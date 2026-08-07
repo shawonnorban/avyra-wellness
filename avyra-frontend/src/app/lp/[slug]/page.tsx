@@ -7,6 +7,7 @@ import { LandingOrderForm } from "@/components/landing/landing-order-form";
 import { SectionRenderer } from "@/components/landing/section-renderer";
 import { ViewContentTracker } from "@/components/view-content-tracker";
 import { getAttribution } from "@/lib/attribution";
+import { pushInitiateCheckout } from "@/lib/gtm";
 import { trackLandingEvent, useLandingPage, useStorefrontSettings } from "@/lib/queries";
 import "../landing.css";
 
@@ -44,6 +45,10 @@ export default function LandingPageView({ params }: { params: Promise<{ slug: st
     if (!page) return;
 
     trackLandingEvent(page.slug, "cta_click");
+
+    // Intent, wherever the CTA leads — a phone CTA is a started checkout too,
+    // even though it never reaches the form.
+    pushInitiateCheckout(page.product);
 
     if (page.cta_type === "phone" && page.cta_value) {
       window.location.href = `tel:${page.cta_value}`;

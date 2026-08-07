@@ -151,6 +151,12 @@ loop and, being custom, needs a Custom Conversion before it can drive optimisati
 `ViewContent` and `InitiateCheckout` are browser-only: they happen before an order exists, so there is
 nothing to carry an `event_id` and no server copy to deduplicate against.
 
+**`InitiateCheckout` marks intent, not submission.** It fires from `pushInitiateCheckout()` on an
+order CTA, on first focus inside `CampaignOrderForm`, or on arriving at `/checkout` with a cart —
+**once per product per tab**, guarded by a module-level `Set` in `lib/gtm.ts`. It used to sit at the
+top of the submit handler, one line above `Lead`, which made the two counts identical by construction
+and the funnel step between them meaningless. Do not move it back.
+
 Full setup notes for the media buyer live in `docs/meta-tracking-handover.md`.
 
 `App\Observers\OrderObserver` is the **single trigger point** — hooking the admin controller would

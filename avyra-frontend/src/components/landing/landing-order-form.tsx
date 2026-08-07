@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { toApiError } from "@/lib/api";
 import { getAttribution } from "@/lib/attribution";
-import { pushEvent } from "@/lib/gtm";
+import { pushEvent, pushInitiateCheckout } from "@/lib/gtm";
 import { getDeviceFingerprint } from "@/lib/fingerprint";
 import { formatTaka, isValidBdPhone, normalizePhone } from "@/lib/format";
 import {
@@ -126,17 +126,6 @@ export function CampaignOrderForm({
       return;
     }
 
-    // Intent, before the order exists — so there is no order to carry an
-    // event_id and no server-side twin to deduplicate against. Browser only.
-    pushEvent("InitiateCheckout", {
-      currency: "BDT",
-      value: total,
-      content_type: "product",
-      content_ids: [product.id],
-      content_name: product.name,
-      num_items: quantity,
-    });
-
     try {
       const order = await placeOrder.mutateAsync({
         customer_name: form.customer_name,
@@ -175,7 +164,10 @@ export function CampaignOrderForm({
   const whatsapp = settings?.company?.whatsapp?.replace(/\D/g, "");
 
   return (
-    <form onSubmit={submit}>
+    /* Someone who scrolls past every CTA and starts typing here has begun
+       checking out just as surely as someone who pressed one; capture on the form
+       rather than per field, and the helper's own guard keeps it to one event. */
+    <form onSubmit={submit} onFocusCapture={() => pushInitiateCheckout(product)}>
       <div className="form-header">
         <span className="lp-form-badge bn">📦 অর্ডার ফর্ম</span>
         <h3 className="bn">অর্ডার করতে নিচের ফর্মটি পূরণ করুন</h3>

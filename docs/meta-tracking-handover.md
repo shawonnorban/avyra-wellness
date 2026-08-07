@@ -44,6 +44,13 @@ Meta's value-adjustment API, which is not built.
   content_ids: [], content_name, num_items }
 ```
 
+Fired when the visitor **starts** ordering, not when they submit: pressing an
+order CTA, first touching the order form on a campaign page, or arriving on
+`/checkout` with a cart. At most once per product per tab, so the funnel step
+between `InitiateCheckout` and `Lead` measures a real drop-off. `content_name`
+and `num_items` are only present where they are known — a CTA press knows the
+product but not the quantity, so `value` there is the unit price.
+
 ### `Lead` — the one that deduplicates
 ```js
 { event: 'Lead',
@@ -135,9 +142,11 @@ Lookalike seeds.
 1. Put a Test Event Code in `FB_TEST_EVENT_CODE`, then watch Events Manager →
    **Test Events**.
 2. Open a product page → `ViewContent`.
-3. Press the order button → `InitiateCheckout`.
+3. Press the order button → `InitiateCheckout`. Pressing a second one must **not**
+   send another; it is one per product per tab.
 4. Submit the form → **one** `Lead`, shown as received from both Browser and
-   Server. Two separate `Lead` rows means the Event ID mapping is wrong.
+   Server, and **no** second `InitiateCheckout` alongside it. Two separate `Lead`
+   rows means the Event ID mapping is wrong.
 5. Set the order to `confirm` in the admin → `Purchase` with the order value.
 6. Set it to `delivered` → `DeliveredPurchase`.
 7. Set another order to `hold`, `fake` or `cancel` → nothing arrives.

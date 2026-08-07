@@ -17,6 +17,7 @@ import { CampaignSlider } from "@/components/landing/campaign-slider";
 import { LpTopHeader, Reveal, ScrollTopButton } from "@/components/landing/landing-chrome";
 import { CampaignOrderForm } from "@/components/landing/landing-order-form";
 import { PurchasePopup } from "@/components/landing/purchase-popup";
+import { pushInitiateCheckout } from "@/lib/gtm";
 import { useProduct, useStorefrontSettings } from "@/lib/queries";
 import { youtubeEmbed } from "@/lib/youtube";
 import { PRODUCT_SLUG, VIDEO_URL, copy } from "./copy";
@@ -36,7 +37,12 @@ export function CampaignPage() {
 
   const orderRef = useRef<HTMLElement>(null);
 
-  const scrollToForm = () => orderRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Every "অর্ডার করুন" button on the page lands here, so this is where intent
+  // is recorded — pressing one is the start of checkout, not submitting the form.
+  const scrollToForm = () => {
+    pushInitiateCheckout(product);
+    orderRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const scrollText = settings?.company?.scroll_text ?? "";
 
