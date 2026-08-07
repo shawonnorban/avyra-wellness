@@ -16,6 +16,7 @@ import type { Paginated } from "@/lib/types";
 type PurchaseItem = {
   id: string;
   product_name: string;
+  variant_label: string | null;
   quantity: number;
   received_qty: number;
   rejected_qty: number;
@@ -38,6 +39,64 @@ type PurchaseRow = {
 };
 
 type Supplier = { id: string; name: string; code: string };
+
+type PurchaseLine = {
+  product_id: string;
+  /** Blank when the product has no variants, or none has been picked yet. */
+  variant_id: string;
+  quantity: string;
+  unit_price: string;
+};
+
+const BLANK_LINE: PurchaseLine = { product_id: "", variant_id: "", quantity: "1", unit_price: "" };
+
+/**
+ * Variant picker for one purchase line.
+ *
+ * Stock lives on the variant, so a purchase that does not name one refills the
+ * product and leaves every variant untouched — the numbers then never reconcile
+ * against orders, which are always variant-level.
+ *
+ * Products with no variants get a disabled placeholder rather than an empty
+ * dropdown, so it is clear there is nothing to choose rather than something
+ * missing.
+ */
+function VariantSelect({
+  products,
+  line,
+  onChange,
+}: {
+  products: { id: string; name: string; variants?: { id: string; size: string | null; color: string | null; sku_suffix: string }[] }[];
+  line: PurchaseLine;
+  onChange: (variantId: string) => void;
+}) {
+  const variants = products.find((p) => p.id === line.product_id)?.variants ?? [];
+
+  if (line.product_id && variants.length === 0) {
+    return (
+      <Select value="" disabled aria-label="Variant">
+        <option value="">No variants</option>
+      </Select>
+    );
+  }
+
+  return (
+    <Select
+      value={line.variant_id}
+      onChange={(e) => onChange(e.target.value)}
+      required={variants.length > 0}
+      disabled={!line.product_id}
+      aria-label="Variant"
+    >
+      <option value="">{line.product_id ? "Choose a variant" : "Variant"}</option>
+      {variants.map((variant) => (
+        <option key={variant.id} value={variant.id}>
+          {[variant.size, variant.color].filter(Boolean).join(" / ") || variant.sku_suffix}
+        </option>
+      ))}
+    </Select>
+  );
+}
 
 const TABS = ["Purchases", "Suppliers"] as const;
 
@@ -237,7 +296,7 @@ function CreatePurchaseDialog({ onClose, onSaved }: { onClose: () => void; onSav
   const { data: products } = useAdminProducts();
 
   const [supplierId, setSupplierId] = useState("");
-  const [lines, setLines] = useState([{ product_id: "", quantity: "1", unit_price: "" }]);
+  const [lines, setLines] = useState<PurchaseLine[]>([BLANK_LINE]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -245,6 +304,10 @@ function CreatePurchaseDialog({ onClose, onSaved }: { onClose: () => void; onSav
         supplier_id: supplierId,
         items: lines.map((line) => ({
           product_id: line.product_id,
+          // Stock is held per variant, so a purchase has to say which one it
+          // refills. Products without variants send null and stock lands on the
+          // product itself.
+          variant_id: line.variant_id || null,
           quantity: Number(line.quantity),
           unit_price: Number(line.unit_price),
         })),
@@ -281,11 +344,16 @@ function CreatePurchaseDialog({ onClose, onSaved }: { onClose: () => void; onSav
 
         <div className="space-y-3">
           {lines.map((line, i) => (
-            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_5rem_7rem_auto]">
+            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_5rem_7rem_auto]">
               <Select
                 value={line.product_id}
                 onChange={(e) =>
-                  setLines(lines.map((l, idx) => (idx === i ? { ...l, product_id: e.target.value } : l)))
+                  // Clearing the variant matters: a variant from the previous
+                  // product would fail validation and, worse, could refill the
+                  // wrong shelf.
+                  setLines(lines.map((l, idx) =>
+                    idx === i ? { ...l, product_id: e.target.value, variant_id: "" } : l,
+                  ))
                 }
                 required
                 aria-label="Product"
@@ -297,6 +365,14 @@ function CreatePurchaseDialog({ onClose, onSaved }: { onClose: () => void; onSav
                   </option>
                 ))}
               </Select>
+
+              <VariantSelect
+                products={products?.data ?? []}
+                line={line}
+                onChange={(variantId) =>
+                  setLines(lines.map((l, idx) => (idx === i ? { ...l, variant_id: variantId } : l)))
+                }
+              />
 
               <Input
                 type="number"
@@ -341,7 +417,7 @@ function CreatePurchaseDialog({ onClose, onSaved }: { onClose: () => void; onSav
           type="button"
           size="sm"
           variant="outline"
-          onClick={() => setLines([...lines, { product_id: "", quantity: "1", unit_price: "" }])}
+          onClick={() => setLines([...lines, BLANK_LINE])}
         >
           Add line
         </Button>
@@ -372,7 +448,9 @@ function ReceiveDialog({
   const [lines, setLines] = useState(
     (purchase.items ?? []).map((item) => ({
       item_id: item.id,
-      name: item.product_name,
+      // The variant is the whole point of the line — receiving 20 pieces means
+      // nothing until you know which shelf they go on.
+      name: [item.product_name, item.variant_label].filter(Boolean).join(" · "),
       pending: item.quantity - item.received_qty - item.rejected_qty,
       received_qty: String(item.quantity - item.received_qty - item.rejected_qty),
       rejected_qty: "0",

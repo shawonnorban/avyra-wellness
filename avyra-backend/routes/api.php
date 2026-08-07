@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\Admin\PurchaseController;
 use App\Http\Controllers\Api\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\SupplierController;
 use App\Http\Controllers\Api\Admin\UploadController;
 use App\Http\Controllers\Api\Admin\UserController;
@@ -124,6 +125,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:employee'])->group(fun
     Route::delete('customers/{customer}', [AdminCustomerController::class, 'destroy'])->middleware('module:customers,delete');
 
     // Inventory / products
+    // Before `products/{product}`, or "stock" is read as a product id.
+    Route::get('products/stock', [StockController::class, 'index'])->middleware('module:inventory,view');
+
     Route::get('products', [AdminProductController::class, 'index'])->middleware('module:inventory,view');
     Route::get('products/{product}', [AdminProductController::class, 'show'])->middleware('module:inventory,view');
     Route::get('products/{product}/movements', [AdminProductController::class, 'movements'])->middleware('module:inventory,view');

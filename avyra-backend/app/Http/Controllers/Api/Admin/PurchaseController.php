@@ -256,6 +256,11 @@ class PurchaseController extends Controller
                 'product_id' => $product->id,
                 'variant_id' => $variant?->id,
                 'product_name' => $product->name,
+                // Snapshotted beside the id, the same way order items do it: the
+                // link is cut if the variant is deleted, the label is not.
+                'variant_label' => $variant
+                    ? (trim(implode(' / ', array_filter([$variant->size, $variant->color]))) ?: $variant->sku_suffix)
+                    : null,
                 'quantity' => $item['quantity'],
                 'unit' => $item['unit'] ?? 'pcs',
                 'unit_price' => $item['unit_price'],

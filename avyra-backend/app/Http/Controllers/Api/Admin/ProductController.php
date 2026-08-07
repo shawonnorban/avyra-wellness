@@ -22,15 +22,13 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->with('variants')
-            // Units actually sold. Cancelled covers returned and lost, which are
-            // no longer statuses of their own; fake orders never happened at all.
+            // Units actually sold: confirmed or delivered only. A pending order is
+            // a request nobody has agreed to yet, and counting it made "sold" run
+            // ahead of the stock that had really moved.
             ->withSum(
                 ['orderItems as sold_count' => fn ($q) => $q->whereHas(
                     'order',
-                    fn ($o) => $o->whereNotIn('status', [
-                        OrderStatus::Cancel->value,
-                        OrderStatus::Fake->value,
-                    ]),
+                    fn ($o) => $o->whereIn('status', OrderStatus::soldValues()),
                 )],
                 'quantity',
             )

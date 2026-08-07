@@ -28,11 +28,17 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Inventory</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Finished goods, stock levels and storage locations.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Inventory</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Finished goods, stock levels and storage locations.
+          </p>
+        </div>
+
+        <Link href="/admin/products/stock" className="text-sm text-primary hover:underline">
+          Stock by variant →
+        </Link>
       </div>
 
       <div className="flex gap-2">

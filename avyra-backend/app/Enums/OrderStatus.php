@@ -46,6 +46,24 @@ enum OrderStatus: string
     }
 
     /**
+     * Statuses that count as a sale in inventory reporting.
+     *
+     * A `pending` order is a request, not a sale: nobody has agreed to buy it
+     * yet and it may well turn out to be fake. `hold` is the same, still
+     * undecided. Counting either inflated "sold" against stock that had not
+     * actually moved.
+     *
+     * One list, used by both the product list and the per-variant stock report,
+     * so the two can never disagree about what a sale is.
+     *
+     * @return array<int, string>
+     */
+    public static function soldValues(): array
+    {
+        return [self::Confirm->value, self::Delivered->value];
+    }
+
+    /**
      * No further transitions happen automatically once an order reaches these.
      */
     public function isTerminal(): bool

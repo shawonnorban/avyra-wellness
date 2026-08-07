@@ -9,6 +9,8 @@ use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\PurchaseItem;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -356,5 +358,176 @@ public function test_a_visit_is_recorded_with_the_device_parsed_from_the_user_ag
         $sources = collect($response->json('breakdowns.source'))->pluck('visits', 'label');
         $this->assertSame(1, $sources['facebook']);
         $this->assertSame(1, $sources['Direct']);
+    }
+public function test_stock_report_values_each_variant_and_counts_units_sold(): void
+    {
+        $product = $this->product();
+
+        $small = $product->variants()->create([
+            'sku_suffix' => '250G', 'size' => '250gm', 'quantity' => 10,
+            'cost_price' => 500, 'sell_price' => 900, 'is_active' => true,
+        ]);
+        $product->variants()->create([
+            'sku_suffix' => '500G', 'size' => '500gm', 'quantity' => 4,
+            'cost_price' => 900, 'sell_price' => 1500, 'is_active' => true,
+        ]);
+
+        // One sold on a confirmed order, three on a cancelled one — only the
+        // first should count.
+        $sold = Order::create([
+            'customer_name' => 'A', 'phone' => '01700000001', 'address' => 'Dhaka',
+            'status' => OrderStatus::Delivered, 'total' => 900,
+        ]);
+        OrderItem::create([
+            'order_id' => $sold->id, 'product_id' => $product->id, 'variant_id' => $small->id,
+            'product_name' => $product->name, 'quantity' => 2, 'unit_price' => 900,
+        ]);
+
+        $void = Order::create([
+            'customer_name' => 'B', 'phone' => '01700000002', 'address' => 'Dhaka',
+            'status' => OrderStatus::Cancel, 'total' => 900,
+        ]);
+        OrderItem::create([
+            'order_id' => $void->id, 'product_id' => $product->id, 'variant_id' => $small->id,
+            'product_name' => $product->name, 'quantity' => 3, 'unit_price' => 900,
+        ]);
+
+        $response = $this->actingAs($this->userWithRole(Role::Manager))
+            ->getJson('/api/admin/products/stock')
+            ->assertOk();
+
+        // 10*500 + 4*900 = 8600 at cost, 10*900 + 4*1500 = 15000 at retail.
+        $response->assertJsonPath('summary.units', 14);
+        $response->assertJsonPath('summary.cost_value', 8600);
+        $response->assertJsonPath('summary.retail_value', 15000);
+        $response->assertJsonPath('summary.potential_profit', 6400);
+
+        // The cancelled order's three pieces are not sales.
+        $response->assertJsonPath('summary.sold_units', 2);
+    }
+
+    public function test_the_stock_route_is_not_swallowed_by_the_product_id_route(): void
+    {
+        // "stock" would otherwise be read as a product id and 404.
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->getJson('/api/admin/products/stock')
+            ->assertOk()
+            ->assertJsonStructure(['data', 'summary']);
+    }
+public function test_pending_orders_do_not_count_as_sold(): void
+    {
+        $product = $this->product();
+
+        $variant = $product->variants()->create([
+            'sku_suffix' => '500G', 'size' => '500gm', 'quantity' => 20,
+            'cost_price' => 900, 'sell_price' => 1500, 'is_active' => true,
+        ]);
+
+        foreach ([OrderStatus::Pending, OrderStatus::Hold, OrderStatus::Confirm, OrderStatus::Delivered] as $i => $status) {
+            $order = Order::create([
+                'customer_name' => 'Buyer ' . $i, 'phone' => '017000000' . $i,
+                'address' => 'Dhaka', 'status' => $status, 'total' => 1500,
+            ]);
+
+            OrderItem::create([
+                'order_id' => $order->id, 'product_id' => $product->id,
+                'variant_id' => $variant->id, 'product_name' => $product->name,
+                'quantity' => 1, 'unit_price' => 1500,
+            ]);
+        }
+
+        $manager = $this->userWithRole(Role::Manager);
+
+        // Only confirm + delivered. A pending order is a request, not a sale,
+        // and hold is still undecided.
+        $this->actingAs($manager)
+            ->getJson('/api/admin/products/stock')
+            ->assertOk()
+            ->assertJsonPath('data.0.sold_count', 2)
+            ->assertJsonPath('summary.sold_units', 2);
+
+        // The product list must agree, or the two screens contradict each other.
+        $this->actingAs($manager)
+            ->getJson('/api/admin/products')
+            ->assertOk()
+            ->assertJsonPath('data.0.sold_count', 2);
+    }
+
+    public function test_stock_value_prices_each_variant_at_its_own_cost(): void
+    {
+        $product = $this->product();
+        $product->update(['quantity' => 30, 'cost_price' => 900]);
+
+        $product->variants()->create([
+            'sku_suffix' => '500G', 'size' => '500gm', 'quantity' => 10,
+            'cost_price' => 900, 'sell_price' => 1500, 'is_active' => true,
+        ]);
+        $product->variants()->create([
+            'sku_suffix' => '250G', 'size' => '250gm', 'quantity' => 20,
+            'cost_price' => 500, 'sell_price' => 900, 'is_active' => true,
+        ]);
+
+        $manager = $this->userWithRole(Role::Manager);
+
+        // 10*900 + 20*500 = 19000. Valuing all 30 at the product's own 900 would
+        // give 27000 — the bug this covers.
+        $this->actingAs($manager)
+            ->getJson('/api/admin/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.inventory.stock_value', 19000);
+
+        // And the stock report has to reach the same number.
+        $this->actingAs($manager)
+            ->getJson('/api/admin/products/stock')
+            ->assertOk()
+            ->assertJsonPath('summary.cost_value', 19000);
+    }
+public function test_receiving_a_purchase_adds_stock_to_the_named_variant(): void
+    {
+        $product = $this->product();
+        $product->update(['quantity' => 0]);
+
+        $small = $product->variants()->create([
+            'sku_suffix' => '250G', 'size' => '250gm', 'quantity' => 5,
+            'cost_price' => 500, 'sell_price' => 900, 'is_active' => true,
+        ]);
+        $large = $product->variants()->create([
+            'sku_suffix' => '500G', 'size' => '500gm', 'quantity' => 5,
+            'cost_price' => 900, 'sell_price' => 1500, 'is_active' => true,
+        ]);
+
+        $supplier = Supplier::create(['code' => 'SUP-1', 'name' => 'Hasan']);
+        $manager = $this->userWithRole(Role::Manager);
+
+        $purchase = $this->actingAs($manager)->postJson('/api/admin/purchases', [
+            'supplier_id' => $supplier->id,
+            'items' => [[
+                'product_id' => $product->id,
+                'variant_id' => $small->id,
+                'quantity' => 20,
+                'unit_price' => 500,
+            ]],
+        ])->assertCreated()->json('data');
+
+        // The label is snapshotted so the line still reads correctly if the
+        // variant is later deleted.
+        $this->assertDatabaseHas('purchase_items', [
+            'purchase_id' => $purchase['id'],
+            'variant_id' => $small->id,
+            'variant_label' => '250gm',
+        ]);
+
+        $itemId = PurchaseItem::where('purchase_id', $purchase['id'])->value('id');
+
+        $this->actingAs($manager)->postJson("/api/admin/purchases/{$purchase['id']}/receive", [
+            'lines' => [['item_id' => $itemId, 'received_qty' => 20, 'rejected_qty' => 0]],
+        ])->assertOk();
+
+        // Only the variant that was bought gains stock. Before this, purchases
+        // were product-level and the variants never moved, so inventory could
+        // not be reconciled against orders.
+        $this->assertSame(25, $small->fresh()->quantity);
+        $this->assertSame(5, $large->fresh()->quantity);
+        $this->assertSame(20, $product->fresh()->quantity);
     }
 }

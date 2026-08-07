@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -41,7 +42,7 @@ class DashboardController extends Controller
                 'inventory' => [
                     'low_stock' => Product::whereColumn('quantity', '<=', 'min_stock')->where('quantity', '>', 0)->count(),
                     'out_of_stock' => Product::where('quantity', 0)->count(),
-                    'stock_value' => (float) Product::selectRaw('COALESCE(SUM(quantity * cost_price), 0) as v')->value('v'),
+                    'stock_value' => $this->stockValue(),
                 ],
             ],
         ]);
@@ -96,5 +97,29 @@ class DashboardController extends Controller
         return (float) Order::where('status', OrderStatus::Delivered->value)
             ->whereBetween('order_date', [$from, $to])
             ->sum('total');
+    }
+
+    /**
+     * What the stock on hand is worth at cost.
+     *
+     * A product with variants carries its stock on the variants, each with its
+     * own cost — the product's `cost_price` is only the base figure shown on
+     * the listing. Pricing every piece at that base overstated the total: 248
+     * pieces at the 500gm cost, when 150 of them were the cheaper 250gm.
+     *
+     * So variants are valued from the variants, and only products without any
+     * fall back to their own columns.
+     */
+    private function stockValue(): float
+    {
+        $fromVariants = (float) ProductVariant::selectRaw(
+            'COALESCE(SUM(quantity * cost_price), 0) as v',
+        )->value('v');
+
+        $fromPlainProducts = (float) Product::whereDoesntHave('variants')
+            ->selectRaw('COALESCE(SUM(quantity * cost_price), 0) as v')
+            ->value('v');
+
+        return round($fromVariants + $fromPlainProducts, 2);
     }
 }

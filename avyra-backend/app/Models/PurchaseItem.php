@@ -11,7 +11,7 @@ class PurchaseItem extends Model
     use HasUuids;
 
     protected $fillable = [
-        'purchase_id', 'product_id', 'variant_id', 'product_name',
+        'purchase_id', 'product_id', 'variant_id', 'product_name', 'variant_label',
         'quantity', 'received_qty', 'rejected_qty', 'unit',
         'unit_price', 'total_cost', 'batch_number',
     ];
