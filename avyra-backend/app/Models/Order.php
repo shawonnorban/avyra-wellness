@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Support\Clock;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,7 +40,10 @@ class Order extends Model
     {
         static::creating(function (Order $order) {
             $order->order_number ??= static::nextOrderNumber();
-            $order->order_date ??= now()->toDateString();
+            // The local date, not the UTC one: an order placed at 02:00 in Dhaka
+            // belongs to that morning, and staff reconcile against the day they
+            // worked, not against a clock six hours behind them.
+            $order->order_date ??= Clock::today();
         });
     }
 
@@ -49,7 +53,9 @@ class Order extends Model
      */
     public static function nextOrderNumber(): string
     {
-        $prefix = 'AVY-' . now()->format('Ymd');
+        // Must agree with `order_date` above, or the 02:00 order carries
+        // yesterday's number while claiming today's date.
+        $prefix = 'AVY-' . Clock::now()->format('Ymd');
 
         $last = static::withoutGlobalScopes()
             ->where('order_number', 'like', $prefix . '-%')

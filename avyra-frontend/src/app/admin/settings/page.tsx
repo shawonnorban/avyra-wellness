@@ -11,7 +11,7 @@ import {
 } from "@/components/admin/image-uploader";
 import { BannersTab, PermissionsTab, StaffTab } from "@/components/admin/settings-tabs";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Card, Spinner } from "@/components/ui/misc";
 import { toApiError } from "@/lib/api";
 import { useAdminSettings, useSaveSetting } from "@/lib/admin";
@@ -20,12 +20,34 @@ type SettingField = {
   /** Dot-notation reaches into a nested object, e.g. `social.facebook`. */
   name: string;
   label: string;
-  type?: "text" | "number" | "checkbox" | "textarea" | "image" | "gallery";
+  type?: "text" | "number" | "checkbox" | "textarea" | "image" | "gallery" | "select";
   hint?: string;
   folder?: UploadFolder;
   /** `gallery` only: how many images the field accepts. */
   max?: number;
+  /** `select` only. */
+  options?: { value: string; label: string }[];
 };
+
+/**
+ * Timezones offered for the shop's trading day.
+ *
+ * A curated list, not every IANA zone: the value has to be an exact identifier
+ * or the API rejects it, and a shop in Bangladesh choosing between four hundred
+ * of them is a worse experience than one that cannot pick an unlikely answer.
+ */
+const TIMEZONES = [
+  { value: "Asia/Dhaka", label: "Dhaka — Bangladesh (GMT+6)" },
+  { value: "Asia/Kolkata", label: "Kolkata — India (GMT+5:30)" },
+  { value: "Asia/Kathmandu", label: "Kathmandu — Nepal (GMT+5:45)" },
+  { value: "Asia/Karachi", label: "Karachi — Pakistan (GMT+5)" },
+  { value: "Asia/Yangon", label: "Yangon — Myanmar (GMT+6:30)" },
+  { value: "Asia/Bangkok", label: "Bangkok — Thailand (GMT+7)" },
+  { value: "Asia/Dubai", label: "Dubai — UAE (GMT+4)" },
+  { value: "Asia/Riyadh", label: "Riyadh — Saudi Arabia (GMT+3)" },
+  { value: "Europe/London", label: "London — United Kingdom (GMT+0/+1)" },
+  { value: "UTC", label: "UTC (GMT+0)" },
+];
 
 /** Reads a possibly-nested value by dot path. */
 function readField(values: Record<string, unknown>, path: string): unknown {
@@ -79,6 +101,13 @@ const GROUPS: {
       { name: "address", label: "Address", type: "textarea" },
       { name: "logo_path", label: "Logo", type: "image", folder: "logos" },
       { name: "currency_symbol", label: "Currency symbol" },
+      {
+        name: "timezone",
+        label: "Timezone",
+        type: "select",
+        options: TIMEZONES,
+        hint: "Which day an order belongs to, and where “today” starts on every report. Times are stored in UTC either way, so changing this re-reads history rather than rewriting it.",
+      },
     ],
   },
   {
@@ -381,7 +410,18 @@ function SettingGroupForm({
             return (
               <div key={field.name} className={field.type === "textarea" ? "sm:col-span-2" : undefined}>
                 <Field label={field.label} hint={field.hint}>
-                  {field.type === "textarea" ? (
+                  {field.type === "select" ? (
+                    <Select
+                      value={String(value ?? "")}
+                      onChange={(e) => set(field.name, e.target.value)}
+                    >
+                      {(field.options ?? []).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : field.type === "textarea" ? (
                     <Textarea
                       value={String(value ?? "")}
                       onChange={(e) => set(field.name, e.target.value)}

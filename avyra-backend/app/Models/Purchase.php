@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Clock;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,14 +34,14 @@ class Purchase extends Model
     {
         static::creating(function (Purchase $purchase) {
             $purchase->purchase_number ??= static::nextPurchaseNumber();
-            $purchase->order_date ??= now()->toDateString();
+            $purchase->order_date ??= Clock::today();
         });
     }
 
     /** Yearly sequence, e.g. PO-2026-0001. */
     public static function nextPurchaseNumber(): string
     {
-        $prefix = 'PO-' . now()->format('Y');
+        $prefix = 'PO-' . Clock::now()->format('Y');
 
         $last = static::where('purchase_number', 'like', $prefix . '-%')
             ->orderByDesc('purchase_number')

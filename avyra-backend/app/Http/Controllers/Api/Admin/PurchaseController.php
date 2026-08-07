@@ -10,6 +10,7 @@ use App\Models\PurchaseItem;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Services\StockService;
+use App\Support\Clock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -235,11 +236,14 @@ class PurchaseController extends Controller
         return response()->json([
             'data' => [
                 'pending_purchases' => Purchase::whereIn('status', ['Ordered', 'Partial'])->count(),
-                'received_today' => Purchase::whereDate('received_date', today())->count(),
+                'received_today' => Purchase::whereDate('received_date', Clock::today())->count(),
                 'payable' => round((float) Purchase::whereNot('status', 'Cancelled')->sum('total')
                     - (float) Purchase::whereNot('status', 'Cancelled')->sum('paid_amount'), 2),
                 'mtd_spend' => (float) Purchase::whereNot('status', 'Cancelled')
-                    ->whereBetween('order_date', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->whereBetween('order_date', [
+                        Clock::now()->startOfMonth()->toDateString(),
+                        Clock::now()->endOfMonth()->toDateString(),
+                    ])
                     ->sum('total'),
             ],
         ]);

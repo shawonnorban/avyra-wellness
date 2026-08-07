@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CampaignVisit;
+use App\Support\Clock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,15 @@ class AnalyticsController extends Controller
     /** Reports are capped so a mistyped range cannot scan the whole table. */
     private const MAX_DAYS = 730;
 
-    private const TIMEZONE = 'Asia/Dhaka';
+    /**
+     * Was a hard-coded 'Asia/Dhaka'. It is now whatever Settings > Company says,
+     * so this report and the dashboard tiles cannot end up disagreeing about
+     * where a day begins.
+     */
+    private function timezone(): string
+    {
+        return Clock::timezone();
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -34,7 +43,7 @@ class AnalyticsController extends Controller
 
         $scoped = fn (): Builder => CampaignVisit::query()->whereBetween('created_at', [$from, $to]);
 
-        $today = Carbon::now(self::TIMEZONE)->startOfDay()->utc();
+        $today = Carbon::now($this->timezone())->startOfDay()->utc();
 
         return response()->json([
             'range' => [
@@ -77,8 +86,8 @@ class AnalyticsController extends Controller
         $days = (int) $request->integer('days', 30);
         $days = max(1, min($days, self::MAX_DAYS));
 
-        $to = Carbon::now(self::TIMEZONE)->endOfDay()->utc();
-        $from = Carbon::now(self::TIMEZONE)->subDays($days - 1)->startOfDay()->utc();
+        $to = Carbon::now($this->timezone())->endOfDay()->utc();
+        $from = Carbon::now($this->timezone())->subDays($days - 1)->startOfDay()->utc();
 
         return [$from, $to, $days];
     }
@@ -96,8 +105,8 @@ class AnalyticsController extends Controller
             ->pluck('visits', 'day');
 
         $days = [];
-        $cursor = $from->copy()->timezone(self::TIMEZONE)->startOfDay();
-        $last = $to->copy()->timezone(self::TIMEZONE)->startOfDay();
+        $cursor = $from->copy()->timezone($this->timezone())->startOfDay();
+        $last = $to->copy()->timezone($this->timezone())->startOfDay();
 
         while ($cursor->lte($last)) {
             $key = $cursor->toDateString();
@@ -155,15 +164,15 @@ class AnalyticsController extends Controller
     private function localDate(): string
     {
         return $this->isSqlite()
-            ? "date(created_at, '+6 hours')"
-            : "DATE(CONVERT_TZ(created_at, '+00:00', '+06:00'))";
+            ? "date(created_at, '" . Clock::sqliteModifier() . "')"
+            : "DATE(CONVERT_TZ(created_at, '+00:00', '" . Clock::offset() . "'))";
     }
 
     private function localHour(): string
     {
         return $this->isSqlite()
-            ? "CAST(strftime('%H', created_at, '+6 hours') AS INTEGER)"
-            : "HOUR(CONVERT_TZ(created_at, '+00:00', '+06:00'))";
+            ? "CAST(strftime('%H', created_at, '" . Clock::sqliteModifier() . "') AS INTEGER)"
+            : "HOUR(CONVERT_TZ(created_at, '+00:00', '" . Clock::offset() . "'))";
     }
 
     /** The test suite runs on in-memory SQLite, which has no CONVERT_TZ. */

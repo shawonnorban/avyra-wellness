@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerRiskProfile;
+use App\Support\Clock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -85,7 +86,9 @@ class CustomerController extends Controller
         return response()->json([
             'data' => [
                 'total' => Customer::count(),
-                'new_this_month' => Customer::where('created_at', '>=', now()->startOfMonth())->count(),
+                // `created_at` is a UTC timestamp, so the local month boundary is
+                // converted to the UTC instant it happened at.
+                'new_this_month' => Customer::where('created_at', '>=', Clock::startOfMonth())->count(),
                 'registered' => Customer::where('type', 'Registered')->count(),
                 'guest' => Customer::where('type', 'Guest')->count(),
                 'total_revenue' => $revenue,

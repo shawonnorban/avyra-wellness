@@ -44,6 +44,10 @@ class SettingController extends Controller
         // The company logo is an upload path, never a pasted URL.
         if ($key === 'company') {
             $rules['value.logo_path'] = ['nullable', new StoredImagePath()];
+            // Clock falls back on an unrecognised zone rather than throwing, so a
+            // typo here would save cleanly and then silently do nothing. Reject it
+            // at the door instead, where there is someone to tell.
+            $rules['value.timezone'] = ['sometimes', 'required', 'timezone'];
         }
 
         // Every slide likewise: a registered upload, not a link to somewhere else.

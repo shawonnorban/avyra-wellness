@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\Clock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +26,7 @@ class DashboardController extends Controller
             'data' => [
                 'orders' => [
                     'total' => (int) $byStatus->sum(),
-                    'today' => Order::whereDate('order_date', today())->count(),
+                    'today' => Order::whereDate('order_date', Clock::today())->count(),
                     'confirmed' => $count(OrderStatus::Confirm),
                     'delivered' => $count(OrderStatus::Delivered),
                     'cancelled' => $count(OrderStatus::Cancel),
@@ -35,9 +36,13 @@ class DashboardController extends Controller
                 ],
                 'customers' => Customer::count(),
                 'revenue' => [
-                    // Only settled orders count as revenue.
-                    'today' => $this->revenue(today(), today()),
-                    'this_month' => $this->revenue(now()->startOfMonth(), now()->endOfMonth()),
+                    // Only settled orders count as revenue. `order_date` is a
+                    // local calendar date, so it is compared against local dates.
+                    'today' => $this->revenue(Clock::today(), Clock::today()),
+                    'this_month' => $this->revenue(
+                        Clock::now()->startOfMonth()->toDateString(),
+                        Clock::now()->endOfMonth()->toDateString(),
+                    ),
                 ],
                 'inventory' => [
                     'low_stock' => Product::whereColumn('quantity', '<=', 'min_stock')->where('quantity', '>', 0)->count(),
@@ -55,7 +60,7 @@ class DashboardController extends Controller
     {
         $rows = Order::selectRaw('order_date, SUM(total) as revenue, COUNT(*) as orders')
             ->where('status', OrderStatus::Delivered->value)
-            ->where('order_date', '>=', now()->subDays(29)->toDateString())
+            ->where('order_date', '>=', Clock::now()->subDays(29)->toDateString())
             ->groupBy('order_date')
             ->orderBy('order_date')
             ->get();

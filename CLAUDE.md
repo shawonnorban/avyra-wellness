@@ -51,6 +51,14 @@ npm run build && npx eslint .
   charge and discount from the database. A `unit_price` in the request body is ignored.
 - **All stock changes go through `StockService`** so `products.quantity` and
   `product_stock_movements` cannot drift apart. Never `update(['quantity' => …])` directly.
+- **Timestamps are stored in UTC and `app.timezone` stays `UTC`.** The trading day comes from
+  `App\Support\Clock`, reading `company.timezone` (default `Asia/Dhaka`, staff-editable under
+  Settings → Company). Pointing `app.timezone` at Dhaka instead looks like the smaller change and is
+  the trap: Laravel writes timestamps *in* the app timezone, so every row already on disk would be
+  re-read six hours out. Anything asking "what is today" — `orders.order_date`, the order number's
+  date prefix, every dashboard tile, `AnalyticsController` — goes through `Clock`, never `today()`
+  or `now()`. Date columns compare against `Clock::today()`; UTC timestamp columns compare against
+  `Clock::startOfDay()`.
 - **Settings are a key/value JSON store** (`Setting::get('fraud_detection')`), cached and busted on
   write. Only rows with `is_public = true` are readable by the storefront; credentials never are.
   The admin API masks secrets as `********` and restores them on save if unchanged.

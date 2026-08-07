@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Services\StockService;
+use App\Support\Clock;
 use App\Support\Media;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -255,7 +256,7 @@ class OrderController extends Controller
                 'total' => $all->sum(),
                 // Its own tab in the orders list, so it is counted here rather
                 // than derived from a status.
-                'today' => Order::whereDate('order_date', today())->count(),
+                'today' => Order::whereDate('order_date', Clock::today())->count(),
             ],
         ]);
     }

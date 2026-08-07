@@ -9,6 +9,7 @@ use App\Models\BlockedPhone;
 use App\Models\CustomerRiskProfile;
 use App\Models\OrderRiskScore;
 use App\Models\Setting;
+use App\Support\Clock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -149,7 +150,12 @@ class FraudController extends Controller
     {
         return response()->json([
             'data' => [
-                'blocked_today' => OrderRiskScore::blocked()->whereDate('created_at', today())->count(),
+                // A range rather than whereDate: `created_at` is stored in UTC, so
+                // the local day is the span between two UTC instants, not a
+                // DATE() comparison against a local date.
+                'blocked_today' => OrderRiskScore::blocked()
+                    ->where('created_at', '>=', Clock::startOfDay())
+                    ->count(),
                 'blocked_total' => OrderRiskScore::blocked()->count(),
                 'flagged_total' => OrderRiskScore::where('action_taken', 'flagged')->count(),
                 'blocked_phones' => BlockedPhone::where('is_active', true)->count(),

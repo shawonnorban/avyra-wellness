@@ -29,6 +29,9 @@ class SettingSeeder extends Seeder
                 'logo_path' => null,
                 'currency' => 'BDT',
                 'currency_symbol' => '৳',
+                // Which day an order belongs to, and where every report's "today"
+                // starts. Storage stays UTC — see App\Support\Clock.
+                'timezone' => 'Asia/Dhaka',
                 'social' => ['facebook' => '', 'instagram' => '', 'youtube' => '', 'tiktok' => ''],
             ], true],
 
