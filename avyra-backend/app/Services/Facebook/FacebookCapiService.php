@@ -33,7 +33,7 @@ class FacebookCapiService
      * which keeps a deployment that never opened the panel working — and is still
      * the safer home for a token, since it never reaches the database.
      *
-     * @return array{pixel_id: ?string, access_token: ?string, test_event_code: ?string}
+     * @return array{pixel_id: ?string, access_token: ?string, test_event_code: ?string, source: string}
      */
     private function credentials(): array
     {
@@ -48,6 +48,7 @@ class FacebookCapiService
                 'pixel_id' => $stored['pixel_id'],
                 'access_token' => $stored['access_token'],
                 'test_event_code' => $stored['test_event_code'] ?: null,
+                'source' => 'Settings → Meta CAPI',
             ];
         }
 
@@ -55,6 +56,32 @@ class FacebookCapiService
             'pixel_id' => config('services.facebook.pixel_id'),
             'access_token' => config('services.facebook.access_token'),
             'test_event_code' => config('services.facebook.test_event_code'),
+            'source' => '.env',
+        ];
+    }
+
+    /**
+     * A redacted view of the resolved credentials for `fb:doctor`.
+     *
+     * Reads through `credentials()` rather than the config directly, so the
+     * diagnostic can never disagree with what a real send would use — which is
+     * the whole reason to run it.
+     *
+     * @return array{source: string, pixel_id: ?string, token: ?string, test_event_code: ?string, configured: bool}
+     */
+    public function describeCredentials(): array
+    {
+        $credentials = $this->credentials();
+        $token = $credentials['access_token'];
+
+        return [
+            'source' => $credentials['source'],
+            // The pixel id is not a secret — it is in the page source — and
+            // seeing it is the point: it has to match the one in the GTM tag.
+            'pixel_id' => $credentials['pixel_id'],
+            'token' => filled($token) ? Str::limit($token, 6, '…' . mb_substr($token, -4)) : null,
+            'test_event_code' => $credentials['test_event_code'],
+            'configured' => $this->isConfigured(),
         ];
     }
 

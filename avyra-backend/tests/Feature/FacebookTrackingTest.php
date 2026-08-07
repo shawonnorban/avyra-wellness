@@ -323,6 +323,44 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
         $this->assertTrue($urls->every(fn ($url) => ! str_contains($url, 'PANEL-PIXEL')));
     }
 
+    /**
+     * The diagnostic has to be trustworthy about the state it exists to report:
+     * blank credentials are the silent failure that sends nothing without logging
+     * anything, and an operator reading "configured" there would look in the
+     * wrong place entirely.
+     */
+    public function test_the_doctor_reports_missing_credentials_as_a_failure(): void
+    {
+        config(['services.facebook.pixel_id' => null, 'services.facebook.access_token' => null]);
+
+        $this->artisan('fb:doctor')
+            ->expectsOutputToContain('NOTHING is being sent')
+            ->assertExitCode(1);
+    }
+
+    public function test_the_doctor_never_prints_the_whole_access_token(): void
+    {
+        config(['services.facebook.access_token' => 'EAAsupersecrettokenvalue']);
+
+        $this->artisan('fb:doctor')
+            ->doesntExpectOutputToContain('EAAsupersecrettokenvalue')
+            ->assertExitCode(0);
+    }
+
+    public function test_the_doctor_lists_an_order_that_still_owes_an_event(): void
+    {
+        $this->facebookRejects = true;
+
+        $order = $this->order(['status' => OrderStatus::Confirm]);
+
+        $this->artisan('fb:doctor')
+            ->expectsOutputToContain($order->order_number)
+            ->expectsOutputToContain('Purchase')
+            ->assertExitCode(0);
+
+        $this->assertEmpty(array_filter((array) $order->fresh()->fb_events_sent));
+    }
+
     /** @return array<int, array<string, mixed>> */
     private function sentPayloads(): array
     {

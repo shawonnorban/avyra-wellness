@@ -46,7 +46,8 @@ class OrderObserver
     {
         $key = FacebookEventMap::keyFor($order->status);
 
-        // hold, fake and delivered deliberately send nothing.
+        // hold, fake and cancel deliberately send nothing — they are internal
+        // judgements, not conversions. delivered does send, as DeliveredPurchase.
         if ($key === null) {
             return;
         }
