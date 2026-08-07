@@ -962,3 +962,30 @@ export function useMarkAllNotificationsRead() {
     },
   });
 }
+
+/* ---------- Site traffic ---------- */
+
+export type SiteAnalytics = {
+  range: { from: string; to: string; days: number };
+  summary: { visits: number; today: number; total: number; unique_paths: number };
+  daily: { day: string; visits: number }[];
+  hourly: { hour: number; visits: number }[];
+  breakdowns: Record<
+    "source" | "medium" | "campaign" | "path" | "device" | "browser" | "os",
+    { label: string; visits: number }[]
+  >;
+};
+
+/**
+ * Shared by the dashboard tile and the analytics page, so the two can never
+ * disagree about how many visits there have been.
+ */
+export function useSiteVisits(days = 30) {
+  return useQuery({
+    queryKey: ["admin", "analytics", days],
+    queryFn: async () => {
+      const { data } = await api.get<SiteAnalytics>("/admin/analytics", { params: { days } });
+      return data;
+    },
+  });
+}

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Eye,
   PackageX,
   RotateCcw,
   Truck,
@@ -13,12 +14,13 @@ import {
 } from "lucide-react";
 import { Badge, Card, Spinner, statusTone } from "@/components/ui/misc";
 import { formatDate, formatTaka } from "@/lib/format";
-import { useDashboard, useRecentOrders, useRevenueChart } from "@/lib/admin";
+import { useDashboard, useRecentOrders, useRevenueChart, useSiteVisits } from "@/lib/admin";
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useDashboard();
   const { data: chart } = useRevenueChart();
   const { data: recent } = useRecentOrders();
+  const { data: traffic } = useSiteVisits();
 
   if (isLoading || !stats) {
     return (
@@ -37,6 +39,12 @@ export default function AdminDashboardPage() {
     { label: "Fake", value: stats.orders.fake, icon: RotateCcw, href: "/admin/orders?status=fake" },
     { label: "Cancelled", value: stats.orders.cancelled, icon: AlertTriangle, href: "/admin/orders?status=cancel" },
     { label: "Customers", value: stats.customers, icon: Users, href: "/admin/customers" },
+    {
+      label: "Website visits",
+      value: traffic?.summary.total ?? 0,
+      icon: Eye,
+      href: "/admin/analytics",
+    },
   ];
 
   const maxRevenue = Math.max(1, ...(chart ?? []).map((d) => d.revenue));

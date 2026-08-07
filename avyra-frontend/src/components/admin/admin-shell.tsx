@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -41,6 +42,7 @@ type NavItem = {
 /** One flat list, in sidebar order. */
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin", module: "dashboard" },
+  { label: "Analytics", icon: BarChart3, path: "/admin/analytics", module: "dashboard" },
   { label: "Shop", icon: ShoppingBag, path: "/shop", external: true },
   { label: "Order", icon: ShoppingCart, path: "/admin/orders", module: "sales" },
   { label: "Customers", icon: UserCircle, path: "/admin/customers", module: "customers" },

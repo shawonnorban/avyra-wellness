@@ -173,6 +173,24 @@ have missed the courier webhook and `courier:sync`, and hooking all three would 
 - `FB_ACCESS_TOKEN` is server-side only. Blank credentials disable sending; nothing else breaks, and
   a blank `NEXT_PUBLIC_GTM_ID` likewise disables the browser half.
 
+## Site traffic
+
+`campaign_visits` doubles as the traffic log. It began as a landing-page counter, so every row needed
+a `landing_page_id` and the rest of the site was invisible; `path` is what lets a row stand alone.
+`POST /api/storefront/visits` records any path, `landing_page_slug` optional.
+
+- **`VisitTracker`** (mounted in `providers.tsx`) fires on route change. `/admin`, `/login` and
+  `/auth` are skipped — on the client *and* again in the controller, so a stale bundle cannot skew
+  the numbers. Paths are deduped per session in `sessionStorage`, so a refresh is not a second visit.
+- **UTMs come from `getAttribution()`**, which keeps the *first* touch: a visitor who arrives from an
+  ad and clicks around stays credited to that ad rather than becoming direct traffic on page two.
+- **Device, browser and OS are parsed on write** (`App\Support\UserAgent`), not on read. The table is
+  never pruned, so matching patterns against the raw string on every dashboard load would get slower
+  for as long as the site is up.
+- **Reports aggregate in SQL** (`AnalyticsController`) and return only the aggregate. Days and hours
+  are bucketed in `Asia/Dhaka`, not UTC, or "today" reads six hours late.
+- The dashboard tile and `/admin/analytics` share `useSiteVisits`, so the two cannot disagree.
+
 ## Customer segments
 
 Six lists behind Meta Lookalike Audiences, at **Admin → Customers → Segments**: delivered, repeat

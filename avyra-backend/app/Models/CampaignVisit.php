@@ -13,8 +13,9 @@ class CampaignVisit extends Model
     const UPDATED_AT = null;
 
     protected $fillable = [
-        'campaign_id', 'landing_page_id', 'event_type',
-        'utm_source', 'utm_medium', 'utm_campaign', 'ip_address', 'user_agent',
+        'campaign_id', 'landing_page_id', 'event_type', 'path', 'referrer',
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+        'ip_address', 'user_agent', 'device', 'browser', 'os',
     ];
 
     public function campaign(): BelongsTo

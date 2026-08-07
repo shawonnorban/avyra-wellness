@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { LanguageProvider } from "@/components/language-provider";
+import { VisitTracker } from "@/components/visit-tracker";
 import { captureAttribution } from "@/lib/attribution";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Inside the provider because it posts through the shared api client, and
+          after captureAttribution above so the first view already carries UTMs. */}
+      <VisitTracker />
       <LanguageProvider>{children}</LanguageProvider>
       <Toaster position="top-center" richColors closeButton />
     </QueryClientProvider>

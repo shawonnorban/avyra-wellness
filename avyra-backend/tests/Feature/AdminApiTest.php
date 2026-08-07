@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
 use App\Enums\Role;
+use App\Models\CampaignVisit;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -302,5 +303,58 @@ public function test_notifications_list_carries_the_unread_count(): void
         $this->actingAs($staff)
             ->getJson('/api/admin/notifications')
             ->assertJsonPath('unread_count', 0);
+    }
+public function test_a_visit_is_recorded_with_the_device_parsed_from_the_user_agent(): void
+    {
+        $this->withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+        ])->postJson('/api/storefront/visits', [
+            'path' => '/avyravitalplus',
+            'utm_source' => 'facebook',
+        ])->assertCreated();
+
+        $visit = CampaignVisit::firstOrFail();
+
+        $this->assertSame('/avyravitalplus', $visit->path);
+        $this->assertSame('facebook', $visit->utm_source);
+        // Parsed once on write, so reports never scan the raw string.
+        $this->assertSame('Mobile', $visit->device);
+        $this->assertSame('iOS', $visit->os);
+        $this->assertSame('Safari', $visit->browser);
+    }
+
+    public function test_admin_paths_are_never_counted_as_site_traffic(): void
+    {
+        $this->postJson('/api/storefront/visits', ['path' => '/admin/orders'])->assertOk();
+
+        $this->assertSame(0, CampaignVisit::count());
+    }
+
+    public function test_analytics_aggregates_visits_without_returning_rows(): void
+    {
+        CampaignVisit::create([
+            'event_type' => 'pageview', 'path' => '/', 'utm_source' => 'facebook',
+            'device' => 'Mobile', 'browser' => 'Chrome', 'os' => 'Android',
+        ]);
+        CampaignVisit::create([
+            'event_type' => 'pageview', 'path' => '/shop',
+            'device' => 'Desktop', 'browser' => 'Chrome', 'os' => 'Windows',
+        ]);
+
+        $response = $this->actingAs($this->userWithRole(Role::Manager))
+            ->getJson('/api/admin/analytics?days=30')
+            ->assertOk();
+
+        $response->assertJsonPath('summary.visits', 2);
+        $response->assertJsonPath('summary.total', 2);
+
+        // Zero-filled, so a gap reads as a flat line rather than a missing day.
+        $this->assertCount(30, $response->json('daily'));
+        $this->assertCount(24, $response->json('hourly'));
+
+        // A visit with no utm_source is "Direct", not a blank row.
+        $sources = collect($response->json('breakdowns.source'))->pluck('visits', 'label');
+        $this->assertSame(1, $sources['facebook']);
+        $this->assertSame(1, $sources['Direct']);
     }
 }

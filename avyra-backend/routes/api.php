@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AnalyticsController;
 use App\Http\Controllers\Api\Admin\CourierController as AdminCourierController;
 use App\Http\Controllers\Api\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Api\Admin\CustomerSegmentController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Api\Admin\WarehouseController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CourierWebhookController;
 use App\Http\Controllers\Api\Storefront\CheckoutController;
+use App\Http\Controllers\Api\Storefront\VisitController;
 use App\Http\Controllers\Api\Storefront\LandingPageController;
 use App\Http\Controllers\Api\Storefront\OrderTrackingController;
 use App\Http\Controllers\Api\Storefront\OtpController;
@@ -42,6 +44,10 @@ Route::prefix('storefront')->group(function () {
     Route::get('reviews', [LandingPageController::class, 'reviews']);
     Route::get('landing-pages/{slug}', [LandingPageController::class, 'show']);
     Route::post('landing-pages/{slug}/visit', [LandingPageController::class, 'trackVisit']);
+
+    // Site-wide page views. Throttled per IP: it is an open endpoint, and a
+    // wedged client retrying should not be able to flood the visits table.
+    Route::post('visits', [VisitController::class, 'store'])->middleware('throttle:60,1');
 
     Route::post('coupons/validate', [CheckoutController::class, 'validateCoupon']);
     Route::post('track-order', [OrderTrackingController::class, 'show']);
@@ -86,6 +92,7 @@ Route::post('webhooks/courier/steadfast', [CourierWebhookController::class, 'ste
 Route::prefix('admin')->middleware(['auth:sanctum', 'role:employee'])->group(function () {
 
     Route::middleware('module:dashboard')->group(function () {
+        Route::get('analytics', [AnalyticsController::class, 'index']);
         Route::get('dashboard', [DashboardController::class, 'index']);
         Route::get('dashboard/revenue-chart', [DashboardController::class, 'revenueChart']);
         Route::get('dashboard/recent-orders', [DashboardController::class, 'recentOrders']);
