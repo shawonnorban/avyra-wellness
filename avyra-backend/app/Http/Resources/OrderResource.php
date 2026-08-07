@@ -19,7 +19,10 @@ class OrderResource extends JsonResource
             'order_number' => $this->order_number,
             'status' => $this->status->value,
             'status_reason' => $this->status_reason,
-            // Full timestamp so the list can show the time under the date.
+            // A date, not a timestamp — the local calendar day the order belongs
+            // to. It serialises as midnight, so the clock time in the UI has to
+            // come from `created_at` below; formatting this one gave every order
+            // the same 06:00 am.
             'order_date' => $this->order_date?->toIso8601String(),
             'order_source' => $this->order_source,
             'branch' => $this->branch,

@@ -415,7 +415,9 @@ function OrderRow({
           {order.order_number}
         </Link>
         <span className="mt-1 block text-xs text-muted-foreground">{formatDate(order.order_date)}</span>
-        <span className="block text-xs text-muted-foreground">{formatTime(order.order_date)}</span>
+        {/* The clock time comes from `created_at`. `order_date` is a date column,
+            so it arrives as midnight and rendered every order at 06:00 am. */}
+        <span className="block text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
       </td>
 
       <td className="py-4 pr-4">

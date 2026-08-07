@@ -100,7 +100,8 @@ export function OrderViewDialog({ orderId, onClose }: { orderId: string; onClose
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <Detail label="Source" value={order.order_source ?? "POS"} />
-          <Detail label="Date" value={formatDateTime(order.order_date)} />
+          {/* `created_at`, not `order_date` — the latter carries no time. */}
+          <Detail label="Date" value={formatDateTime(order.created_at)} />
           <Detail label="Customer" value={order.customer.name} />
           <Detail label="Phone" value={order.customer.phone} />
           <div className="col-span-2">

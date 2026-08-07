@@ -81,6 +81,8 @@ export type StorefrontSettings = {
     logo_url: string | null;
     currency: string;
     currency_symbol: string;
+    /** IANA zone the shop trades in — every admin date is rendered in it. */
+    timezone?: string;
     social: { facebook: string; instagram: string; youtube: string; tiktok: string };
   };
   /** Plain-text bodies for the footer policy pages. */

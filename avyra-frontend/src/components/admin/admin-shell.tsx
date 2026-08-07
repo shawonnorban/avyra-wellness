@@ -27,6 +27,8 @@ import { twMerge } from "tailwind-merge";
 import { Spinner } from "@/components/ui/misc";
 import { NotificationBell } from "@/components/admin/notification-bell";
 import { useLogout, useMe } from "@/lib/admin";
+import { setShopTimeZone } from "@/lib/format";
+import { useStorefrontSettings } from "@/lib/queries";
 import type { AdminUser } from "@/lib/types";
 import { useStoredValue } from "@/lib/use-stored-value";
 
@@ -60,6 +62,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: user, isLoading, isError } = useMe();
+  const { data: settings } = useStorefrontSettings();
+
+  // Every date in the panel is then read in the shop's timezone rather than the
+  // viewer's, so a manager travelling does not see a different set of numbers
+  // from the reports. Assigned during render, not in an effect: an effect runs
+  // after the children below have already formatted their dates, which would
+  // show one frame of the wrong zone on every navigation.
+  setShopTimeZone(settings?.company?.timezone);
 
   const [mobileOpen, setMobileOpen] = useState(false);
 

@@ -6,6 +6,21 @@ export function formatTaka(amount: number, symbol = "৳"): string {
   }).format(amount)}`;
 }
 
+/**
+ * The shop's timezone, mirrored from the public company settings by
+ * `ShopTimeZoneSync`.
+ *
+ * A module variable rather than a hook because these are plain functions called
+ * from dozens of places, none of which want to become settings consumers. While
+ * it is undefined — the first paint, before settings resolve — `Intl` falls back
+ * to the viewer's own zone, which for staff in Dhaka is already the right answer.
+ */
+let shopTimeZone: string | undefined;
+
+export function setShopTimeZone(zone: string | null | undefined): void {
+  shopTimeZone = zone || undefined;
+}
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
 
@@ -13,6 +28,7 @@ export function formatDate(value: string | null | undefined): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: shopTimeZone,
   }).format(new Date(value));
 }
 
@@ -25,6 +41,7 @@ export function formatDateTime(value: string | null | undefined): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: shopTimeZone,
   }).format(new Date(value));
 }
 
@@ -40,7 +57,12 @@ export function productImageUrl(path: string): string {
   return `${base}/storage/${path}`;
 }
 
-/** Clock time only — the orders list shows it on its own line under the date. */
+/**
+ * Clock time only — the orders list shows it on its own line under the date.
+ *
+ * Feed this `created_at`, never `order_date`: the latter is a date column, so it
+ * arrives as midnight and every row renders the same meaningless time.
+ */
 export function formatTime(value: string | null | undefined): string {
   if (!value) return "";
 
@@ -48,6 +70,7 @@ export function formatTime(value: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: shopTimeZone,
   }).format(new Date(value));
 }
 
