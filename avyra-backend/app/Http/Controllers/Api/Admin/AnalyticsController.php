@@ -30,7 +30,7 @@ class AnalyticsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        [$from, $to] = $this->range($request);
+        [$from, $to, $days] = $this->range($request);
 
         $scoped = fn (): Builder => CampaignVisit::query()->whereBetween('created_at', [$from, $to]);
 
@@ -40,7 +40,7 @@ class AnalyticsController extends Controller
             'range' => [
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
-                'days' => $from->diffInDays($to) + 1,
+                'days' => $days,
             ],
             'summary' => [
                 'visits' => $scoped()->count(),
@@ -66,7 +66,11 @@ class AnalyticsController extends Controller
     /**
      * Resolves the requested window, defaulting to the last 30 days.
      *
-     * @return array{0: Carbon, 1: Carbon}
+     * The day count is returned rather than derived from the two dates:
+     * `diffInDays()` is a float in Carbon 3, and it surfaced in the UI as
+     * "30.999999999988425 days".
+     *
+     * @return array{0: Carbon, 1: Carbon, 2: int}
      */
     private function range(Request $request): array
     {
@@ -76,7 +80,7 @@ class AnalyticsController extends Controller
         $to = Carbon::now(self::TIMEZONE)->endOfDay()->utc();
         $from = Carbon::now(self::TIMEZONE)->subDays($days - 1)->startOfDay()->utc();
 
-        return [$from, $to];
+        return [$from, $to, $days];
     }
 
     /**

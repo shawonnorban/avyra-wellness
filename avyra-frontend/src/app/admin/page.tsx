@@ -33,7 +33,6 @@ export default function AdminDashboardPage() {
   const tiles = [
     { label: "Today's orders", value: stats.orders.today, icon: Clock, href: "/admin/orders" },
     { label: "Pending", value: stats.orders.pending, icon: Clock, href: "/admin/orders?status=pending" },
-    { label: "Confirmed", value: stats.orders.confirmed, icon: CheckCircle2, href: "/admin/orders?status=Confirmed" },
     { label: "Confirmed", value: stats.orders.confirmed, icon: Truck, href: "/admin/orders?status=confirm" },
     { label: "Delivered", value: stats.orders.delivered, icon: CheckCircle2, href: "/admin/orders?status=delivered" },
     { label: "Fake", value: stats.orders.fake, icon: RotateCcw, href: "/admin/orders?status=fake" },
