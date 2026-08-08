@@ -6,6 +6,7 @@ use App\Models\FbEventLog;
 use App\Models\Order;
 use App\Services\Facebook\FacebookCapiService;
 use App\Services\Facebook\FacebookEventMap;
+use App\Support\Clock;
 use Illuminate\Console\Command;
 
 /**
@@ -49,7 +50,11 @@ class FacebookDoctor extends Command
         $this->info('  Configured — events will be attempted.');
 
         if (filled($credentials['test_event_code'])) {
-            $this->warn('  A test event code is set: conversions land in Test Events, NOT in reporting.');
+            $this->newLine();
+            $this->error('  A TEST EVENT CODE IS SET — this is not live tracking.');
+            $this->line('  Every conversion lands in Events Manager > Test Events and counts for');
+            $this->line('  nothing: no reporting, no attribution, no ad optimisation. Fine while');
+            $this->line('  you verify the setup; clear it before running real campaigns.');
         }
 
         $this->newLine();
@@ -80,7 +85,9 @@ class FacebookDoctor extends Command
                 return [
                     $order->order_number,
                     $order->status->value,
-                    $order->created_at?->format('d M H:i'),
+                    // Local time, or an operator comparing this against "the order
+                    // I just placed" is six hours out and concludes it is missing.
+                    $order->created_at?->setTimezone(Clock::timezone())->format('d M h:i a'),
                     $missing ? "<fg=red>{$owed}</>" : $owed,
                     implode(', ', array_map(
                         fn (string $key) => FacebookEventMap::EVENT_NAMES[$key] ?? $key,
@@ -102,7 +109,26 @@ class FacebookDoctor extends Command
         $this->newLine();
         $this->line('<options=bold>Rejected calls</>');
 
-        if ($failures->isEmpty()) {
+        // "No failures" and "it is working" are not the same claim, and reading
+        // the first as the second sends an operator off to debug GTM when in
+        // fact the server has never once called Meta. Orders placed while the
+        // credentials were blank returned early without sending or logging, and
+        // nothing replays them: only a *new* status change tries again.
+        $everSent = $orders->contains(
+            fn (Order $order) => array_filter((array) ($order->fb_events_sent ?? [])) !== [],
+        );
+
+        if ($failures->isEmpty() && ! $everSent) {
+            $this->warn('  Nothing was rejected — because nothing has been attempted yet.');
+            $this->newLine();
+            $this->line('  Every order above predates the credentials, and none of them will be');
+            $this->line('  retried: an event is only sent when an order is created or its status');
+            $this->line('  changes. Do NOT try to force them — Meta drops events over seven days');
+            $this->line('  old, so replaying them would stamp old sales with today\'s date.');
+            $this->newLine();
+            $this->line('  <options=bold>Place one fresh order, then run this again.</> That row should read');
+            $this->line('  Sent: Lead. Until it does, the server half is unproven.');
+        } elseif ($failures->isEmpty()) {
             $this->info('  None. Every attempt Meta received, it accepted.');
             $this->newLine();
             $this->line('  If Events Manager still shows only PageView, the missing half is the');

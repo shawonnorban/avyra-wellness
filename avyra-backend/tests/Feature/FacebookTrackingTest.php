@@ -347,6 +347,36 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
             ->assertExitCode(0);
     }
 
+    /**
+     * "Nothing was rejected" must not be reported as "it works". An order placed
+     * before the credentials existed sent nothing and logged nothing, and the
+     * two states are indistinguishable in the failure table — reading the first
+     * as the second sends an operator to debug GTM while the server half has
+     * never made a single call.
+     */
+    public function test_the_doctor_distinguishes_never_attempted_from_all_accepted(): void
+    {
+        // An order that predates the credentials: no events sent, none rejected.
+        $order = $this->order();
+        $order->forceFill(['fb_events_sent' => []])->saveQuietly();
+
+        $this->artisan('fb:doctor')
+            ->expectsOutputToContain('nothing has been attempted yet')
+            ->doesntExpectOutputToContain('Server events are arriving')
+            ->assertExitCode(0);
+    }
+
+    public function test_the_doctor_confirms_delivery_once_an_event_has_been_accepted(): void
+    {
+        // The observer sends Lead on creation, and the stubbed Meta accepts it.
+        $this->order();
+
+        $this->artisan('fb:doctor')
+            ->expectsOutputToContain('Server events are arriving')
+            ->doesntExpectOutputToContain('nothing has been attempted yet')
+            ->assertExitCode(0);
+    }
+
     public function test_the_doctor_lists_an_order_that_still_owes_an_event(): void
     {
         $this->facebookRejects = true;
