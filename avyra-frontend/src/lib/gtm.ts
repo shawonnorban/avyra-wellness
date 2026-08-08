@@ -19,18 +19,51 @@ declare global {
 
 export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
 
-/** Event names pushed to the dataLayer, mirroring the Meta event they drive. */
-export type GtmEvent = "ViewContent" | "InitiateCheckout" | "Lead";
+/**
+ * Event names pushed to the dataLayer. The three Meta ones mirror the event they
+ * drive; `page_view` is the App Router navigation, which GTM cannot see by itself.
+ */
+export type GtmEvent = "ViewContent" | "InitiateCheckout" | "Lead" | "page_view";
 
 /**
  * Pushes an event. Safe before GTM has loaded — the snippet creates the array
  * and replays anything already in it — and a no-op on the server.
  */
+/**
+ * Keys that belong to one event and must not survive into the next.
+ *
+ * GTM's data layer is cumulative: a push *merges* into the existing model rather
+ * than replacing it, so whatever `ViewContent` set is still readable when `Lead`
+ * fires. `Lead` deliberately carries no `value` — only the money events report
+ * one — but a tag reading `{{DLV - value}}` on it would quietly pick up the unit
+ * price left behind by `ViewContent` and report ৳1490 for a ৳1540 order.
+ *
+ * So every key in this list that the current payload does not set is explicitly
+ * pushed as `undefined`, which is how GTM clears a data layer variable.
+ */
+const EVENT_SCOPED_KEYS = [
+  "value",
+  "currency",
+  "content_type",
+  "content_ids",
+  "content_name",
+  "num_items",
+  "event_id",
+  "event_name",
+  "order_id",
+] as const;
+
 export function pushEvent(event: GtmEvent, payload: Record<string, unknown> = {}): void {
   if (typeof window === "undefined") return;
 
+  const cleared: Record<string, undefined> = {};
+
+  for (const key of EVENT_SCOPED_KEYS) {
+    if (!(key in payload)) cleared[key] = undefined;
+  }
+
   window.dataLayer = window.dataLayer ?? [];
-  window.dataLayer.push({ event, ...payload });
+  window.dataLayer.push({ event, ...cleared, ...payload });
 }
 
 /** The product identity a funnel event carries. */

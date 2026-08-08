@@ -24,11 +24,13 @@ export function GoogleTagManager() {
   // App Router navigations do not reload the page, so GTM's own History Change
   // trigger is the only thing that would see them. Pushing a virtual page view
   // gives the container something explicit to hang a Pixel PageView on.
+  // Goes through pushEvent so that arriving on a new page also clears the
+  // product and order keys the previous page left in the data layer; pushing
+  // straight to window.dataLayer here would carry them across the navigation.
   useEffect(() => {
-    if (!GTM_ID || typeof window === "undefined") return;
+    if (!GTM_ID) return;
 
-    window.dataLayer = window.dataLayer ?? [];
-    window.dataLayer.push({ event: "page_view", page_path: pathname });
+    pushEvent("page_view", { page_path: pathname });
   }, [pathname]);
 
   if (!GTM_ID) return null;
