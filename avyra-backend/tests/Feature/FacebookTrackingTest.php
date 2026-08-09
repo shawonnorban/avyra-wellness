@@ -93,9 +93,10 @@ class FacebookTrackingTest extends TestCase
             array_column($events, 'event_name'),
         );
 
-        // Only the money events carry a value; one on Lead would count the same
-        // order's revenue at two stages of the funnel.
-        $this->assertArrayNotHasKey('value', $events[0]['custom_data']);
+        // All three report the order total. The same money therefore appears at
+        // two funnel stages, which is intended — Lead is what the media buyer
+        // optimises against — but means the two must never be summed.
+        $this->assertSame(1500.0, $events[0]['custom_data']['value']);
         $this->assertSame(1500.0, $events[1]['custom_data']['value']);
         $this->assertSame(1500.0, $events[2]['custom_data']['value']);
         $this->assertSame('BDT', $events[1]['custom_data']['currency']);
@@ -285,8 +286,10 @@ public function test_checkout_hands_the_browser_the_same_event_id_it_sends(): vo
         $this->assertSame($this->sentEvents()[0]['event_id'], $payload['event_id']);
         $this->assertSame($order->order_number, $payload['order_id']);
 
-        // No value on Lead — the browser must not claim revenue the server does not.
-        $this->assertArrayNotHasKey('value', $payload);
+        // The browser copy must claim exactly the revenue the server copy does,
+        // or a deduplicated pair disagrees about what the conversion was worth.
+        $this->assertSame((float) $order->total, $payload['value']);
+        $this->assertSame($this->sentEvents()[0]['custom_data']['value'], $payload['value']);
     }
 public function test_the_settings_panel_overrides_the_env_credentials(): void
     {

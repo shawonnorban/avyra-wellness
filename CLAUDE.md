@@ -144,12 +144,19 @@ Five events, three of them from an order status:
 |---|---|---|---|
 | Product page viewed | `ViewContent` | browser | — |
 | Order button pressed | `InitiateCheckout` | browser | — |
-| `pending` (form submitted) | `Lead` | browser + server | — |
+| `pending` (form submitted) | `Lead` | browser + server | order total |
 | `confirm` | `Purchase` | server | order total |
 | `delivered` | `DeliveredPurchase` (custom) | server | order total |
 
 `hold`, `fake` and `cancel` send **nothing** — internal judgements, not conversions. A cancellation
 does not retract a `Purchase` already sent; that needs Meta's value-adjustment API, out of scope.
+
+**All three carry the order total**, so the same money is reported at two funnel stages — once when
+the form is submitted and again when the order is confirmed. That is deliberate: the media buyer
+optimises against `Lead`, which needs a value to optimise on. It does mean **Lead value and Purchase
+value must never be added together**; they are the same taka counted twice. The browser and server
+copies of `Lead` must also report the *identical* number, or a deduplicated pair disagrees about
+what the conversion was worth — which is why both read `orders.total` rather than recomputing.
 
 The mapping sits one stage earlier than Meta's own funnel naming, to suit cash on delivery: `Purchase`
 fires at phone confirmation rather than delivery, so the algorithm gets the signal in hours instead of

@@ -31,8 +31,11 @@ class BrowserTrackingPayload
             'event_id' => $this->capi->eventIdFor($order, FacebookEventMap::LEAD),
             'order_id' => $order->order_number,
             'currency' => config('services.facebook.currency', 'BDT'),
-            // No `value`: only the money events report one, and the browser copy
-            // must not claim revenue the server copy does not.
+            // The order total, which is what the server copy sends too — the two
+            // must agree exactly or Meta sees a mismatch on a deduplicated pair.
+            // With delivery discounted to nothing this is the variant's sell
+            // price, and it stays right if that ever stops being true.
+            'value' => (float) $order->total,
             'content_type' => 'product',
             'content_ids' => $items->pluck('product_id')->filter()->values()->all(),
             'content_name' => $items->pluck('product_name')->filter()->join(', '),

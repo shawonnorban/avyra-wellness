@@ -56,8 +56,18 @@ product but not the quantity, so `value` there is the unit price.
 { event: 'Lead',
   event_id,          // ← must go into the Pixel tag's Event ID field
   order_id,
+  value,             // the order total; the server copy sends the same number
   currency, content_type: 'product', content_ids: [], content_name, num_items }
 ```
+
+`value` is the **order total**, identical to what the server's copy reports — map
+it as `{{DLV - value}}`. Do not compute it in GTM from anything else: if the two
+copies disagree, a deduplicated pair carries a contradictory amount.
+
+`Purchase` reports the same total again when the order is confirmed by phone.
+That is intended — `Lead` is what campaigns optimise against and needs a value —
+but it means **`Lead` value and `Purchase` value must never be summed**. They are
+one order's money reported at two stages.
 
 There is also a `page_view` push on every route change, because App Router
 navigations do not reload the page and GTM's History Change trigger is otherwise

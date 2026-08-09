@@ -61,8 +61,20 @@ final class FacebookEventMap
      * `Lead` deliberately does not: the same order would otherwise be counted at
      * two stages and inflate reported revenue.
      */
+    /**
+     * Every event reports the order total.
+     *
+     * Lead used to be excluded, on the reasoning that money belongs only to the
+     * events that settle it. The shop asked for it: with delivery discounted to
+     * nothing, the Lead value *is* the variant's sell price, and a media buyer
+     * optimising on Lead needs a number to optimise against.
+     *
+     * The cost is that the same order's money appears at two funnel stages, so
+     * Lead value and Purchase value must never be added together — they are the
+     * same taka reported twice, once on submission and once on confirmation.
+     */
     public static function carriesValue(string $key): bool
     {
-        return in_array($key, [self::PURCHASE, self::DELIVERED_PURCHASE], true);
+        return in_array($key, [self::LEAD, self::PURCHASE, self::DELIVERED_PURCHASE], true);
     }
 }
