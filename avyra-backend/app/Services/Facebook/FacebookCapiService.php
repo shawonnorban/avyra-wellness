@@ -205,7 +205,7 @@ class FacebookCapiService
                     'event_name' => $eventName,
                     'event_time' => $this->eventTime($order),
                     'event_id' => $this->eventIdFor($order, $key),
-                    'action_source' => 'website',
+                    'action_source' => $this->actionSource($order),
                     'event_source_url' => $order->landing_url ?: null,
                     'user_data' => array_filter([
                         // Nullable on the table: a staff-entered order may have
@@ -234,6 +234,24 @@ class FacebookCapiService
         }
 
         return $payload;
+    }
+
+    /**
+     * How the conversion actually reached the business.
+     *
+     * A staff-entered order (`order_source` POS) never touched the site: it is
+     * created straight to `confirm` from the admin panel and carries no IP, user
+     * agent, `fbc` or `fbp`. Reporting it as `website` credited campaigns with
+     * sales that arrived over the phone, and left Meta matching them to ad clicks
+     * on the hashed phone number alone. `phone_call` is Meta's own value for
+     * exactly this, and it keeps the website conversion figures honest.
+     *
+     * Still sent rather than suppressed: a cash-on-delivery buyer who rings the
+     * number in an advert is a real conversion, just not a browser one.
+     */
+    private function actionSource(Order $order): string
+    {
+        return $order->order_source === 'POS' ? 'phone_call' : 'website';
     }
 
     /**

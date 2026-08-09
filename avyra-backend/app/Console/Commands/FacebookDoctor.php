@@ -149,8 +149,44 @@ class FacebookDoctor extends Command
             $this->line('  Replay them with `php artisan fb:retry-events`.');
         }
 
+        $this->reportRetryBacklog();
+
         $this->newLine();
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Whether the hourly retry is actually running.
+     *
+     * `fb:retry-events` is scheduled, so it only ever runs if a cron is calling
+     * `schedule:run` — and if that was never set up, a failed event is owed
+     * forever while everything else looks healthy. Laravel keeps no record of
+     * the last scheduled run, so this infers it: a replayable failure that has
+     * sat untouched for more than two hours means an hourly job did not touch it.
+     *
+     * Silent when there is nothing to retry, since that proves nothing either way.
+     */
+    private function reportRetryBacklog(): void
+    {
+        $stale = FbEventLog::query()
+            ->where('status', FbEventLog::STATUS_FAILED)
+            ->where('attempt_count', '<', FbEventLog::MAX_ATTEMPTS)
+            ->where('last_attempt_at', '<', now()->subHours(2))
+            ->count();
+
+        if ($stale === 0) {
+            return;
+        }
+
+        $this->newLine();
+        $this->line('<options=bold>Scheduler</>');
+        $this->error("  {$stale} failed event(s) still under the retry limit have not been");
+        $this->line('  retried in over two hours. `fb:retry-events` is scheduled hourly, so');
+        $this->line('  the cron calling `schedule:run` is probably not set up.');
+        $this->newLine();
+        $this->line('  Check with `php artisan schedule:list`, then add a cron job running');
+        $this->line('  `php artisan schedule:run` every minute. Without it `courier:sync`');
+        $this->line('  is not running either, and courier statuses rely on it as a backstop.');
     }
 }

@@ -380,6 +380,52 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
             ->assertExitCode(0);
     }
 
+    /**
+     * A phone order reported as a website conversion credits campaigns with
+     * sales no advert produced, and Meta then matches it to ad clicks on the
+     * hashed phone number alone — the order carries no IP, user agent or click
+     * id to contradict that.
+     */
+    /**
+     * A failure that sits past its retry window is the only visible symptom of a
+     * missing cron — everything else about the setup looks healthy while events
+     * are quietly owed forever.
+     */
+    public function test_the_doctor_notices_that_the_hourly_retry_is_not_running(): void
+    {
+        $this->facebookRejects = true;
+        $this->order();
+
+        FbEventLog::query()->update(['last_attempt_at' => now()->subHours(3)]);
+
+        $this->artisan('fb:doctor')
+            ->expectsOutputToContain('schedule:run')
+            ->assertExitCode(0);
+    }
+
+    public function test_the_doctor_stays_quiet_about_the_scheduler_with_nothing_to_retry(): void
+    {
+        $this->order();
+
+        $this->artisan('fb:doctor')
+            ->doesntExpectOutputToContain('schedule:run')
+            ->assertExitCode(0);
+    }
+
+    public function test_a_staff_entered_order_is_not_reported_as_a_website_conversion(): void
+    {
+        $this->order(['status' => OrderStatus::Confirm, 'order_source' => 'POS']);
+
+        $this->assertSame('phone_call', $this->sentEvents()[0]['action_source']);
+    }
+
+    public function test_a_storefront_order_is_still_a_website_conversion(): void
+    {
+        $this->order(['order_source' => 'Website']);
+
+        $this->assertSame('website', $this->sentEvents()[0]['action_source']);
+    }
+
     public function test_the_doctor_lists_an_order_that_still_owes_an_event(): void
     {
         $this->facebookRejects = true;
