@@ -24,7 +24,7 @@ class FbEventLog extends Model
     public const MAX_ATTEMPTS = 5;
 
     protected $fillable = [
-        'order_id', 'event_name', 'status', 'payload',
+        'order_id', 'event_name', 'pixel_id', 'status', 'payload',
         'error_message', 'attempt_count', 'last_attempt_at',
     ];
 

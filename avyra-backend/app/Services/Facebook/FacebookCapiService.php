@@ -61,70 +61,137 @@ class FacebookCapiService
     }
 
     /**
+     * Every pixel this shop reports to, in send order.
+     *
+     * A list rather than a pair because an access token is bound to its own
+     * pixel — there is no "send to both with one credential" — so each
+     * destination has to carry its own. The settings panel exposes two, which is
+     * what the shop asked for; adding a third is a settings field and a line
+     * here, not a change to anything downstream, because everything past this
+     * point already iterates.
+     *
+     * The `test_event_code` is deliberately shared: it marks a whole testing
+     * session, not one destination.
+     *
+     * @return list<array{pixel_id: string, access_token: string, test_event_code: ?string}>
+     */
+    private function destinations(): array
+    {
+        $primary = $this->credentials();
+        $stored = Setting::get('meta_capi', []) ?: [];
+
+        $destinations = [];
+
+        if (filled($primary['pixel_id']) && filled($primary['access_token'])) {
+            $destinations[] = [
+                'pixel_id' => (string) $primary['pixel_id'],
+                'access_token' => (string) $primary['access_token'],
+                'test_event_code' => $primary['test_event_code'],
+            ];
+        }
+
+        // The second lives only in the panel: an .env pair describes one pixel,
+        // and a shop reporting to two is configuring it deliberately.
+        if (! empty($stored['enabled'])
+            && filled($stored['pixel_id_2'] ?? null)
+            && filled($stored['access_token_2'] ?? null)) {
+            $destinations[] = [
+                'pixel_id' => (string) $stored['pixel_id_2'],
+                'access_token' => (string) $stored['access_token_2'],
+                'test_event_code' => $primary['test_event_code'],
+            ];
+        }
+
+        // Two entries naming the same pixel would send everything twice to it,
+        // and the second copy is not deduplicated — same event_id, but Facebook
+        // discards a repeat only within one pixel's own stream, which is exactly
+        // where this would land it.
+        return array_values(array_column($destinations, null, 'pixel_id'));
+    }
+
+    /**
      * A redacted view of the resolved credentials for `fb:doctor`.
      *
      * Reads through `credentials()` rather than the config directly, so the
      * diagnostic can never disagree with what a real send would use — which is
      * the whole reason to run it.
      *
-     * @return array{source: string, pixel_id: ?string, token: ?string, test_event_code: ?string, configured: bool}
+     * @return array{source: string, test_event_code: ?string, configured: bool,
+     *               pixels: list<array{pixel_id: string, token: string}>}
      */
     public function describeCredentials(): array
     {
         $credentials = $this->credentials();
-        $token = $credentials['access_token'];
 
         return [
             'source' => $credentials['source'],
-            // The pixel id is not a secret — it is in the page source — and
-            // seeing it is the point: it has to match the one in the GTM tag.
-            'pixel_id' => $credentials['pixel_id'],
-            'token' => filled($token) ? Str::limit($token, 6, '…' . mb_substr($token, -4)) : null,
             'test_event_code' => $credentials['test_event_code'],
             'configured' => $this->isConfigured(),
+            'pixels' => array_map(fn (array $destination) => [
+                // The pixel id is not a secret — it is in the page source — and
+                // seeing it is the point: it has to match the one in the GTM tag.
+                'pixel_id' => $destination['pixel_id'],
+                'token' => Str::limit(
+                    $destination['access_token'],
+                    6,
+                    '…' . mb_substr($destination['access_token'], -4),
+                ),
+            ], $this->destinations()),
         ];
     }
 
     /** Credentials missing means tracking is simply off, not broken. */
     public function isConfigured(): bool
     {
-        $credentials = $this->credentials();
-
-        return filled($credentials['pixel_id']) && filled($credentials['access_token']);
+        return $this->destinations() !== [];
     }
 
     /**
-     * Sends the event for `$key` if the order has not already had it, and
-     * records the flag only once Facebook has accepted it.
+     * Sends the event for `$key` to every pixel that has not already had it, and
+     * records each flag only once Facebook has accepted that copy.
+     *
+     * The payload is built once and reused across destinations so all of them
+     * carry the same `event_id` — each pixel then deduplicates its own browser
+     * copy against it, and the shop can reconcile one order across both.
+     *
+     * Returns whether *anything* was sent. A destination that fails is logged
+     * for retry and does not stop the others: one expired token must not cost
+     * the other pixel its conversion.
      *
      * Never throws: a tracking failure must not roll back the order change that
      * triggered it.
      */
     public function sendForOrder(Order $order, string $key): bool
     {
-        if (! $this->isConfigured() || ! $this->deduper->shouldSend($order, $key)) {
-            return false;
+        $payload = null;
+        $sentAny = false;
+
+        foreach ($this->destinations() as $destination) {
+            if (! $this->deduper->shouldSend($order, $key, $destination['pixel_id'])) {
+                continue;
+            }
+
+            $payload ??= $this->buildPayload($order, $key);
+
+            try {
+                $result = $this->post($payload, $destination);
+            } catch (Throwable $e) {
+                // A thrown exception is the same outcome as a rejected call: log
+                // it for retry rather than letting it escape into the order update.
+                $result = ['ok' => false, 'error' => $e->getMessage()];
+            }
+
+            if ($result['ok']) {
+                $this->deduper->markSent($order, $key, $destination['pixel_id']);
+                $sentAny = true;
+
+                continue;
+            }
+
+            $this->logFailure($order, $key, $payload, $result['error'], $destination['pixel_id']);
         }
 
-        $payload = $this->buildPayload($order, $key);
-
-        try {
-            $result = $this->post($payload);
-        } catch (Throwable $e) {
-            // A thrown exception is the same outcome as a rejected call: log it
-            // for retry rather than letting it escape into the order update.
-            $result = ['ok' => false, 'error' => $e->getMessage()];
-        }
-
-        if ($result['ok']) {
-            $this->deduper->markSent($order, $key);
-
-            return true;
-        }
-
-        $this->logFailure($order, $key, $payload, $result['error']);
-
-        return false;
+        return $sentAny;
     }
 
     /**
@@ -133,17 +200,33 @@ class FacebookCapiService
      *
      * @return array{ok: bool, error: string|null}
      */
-    public function resend(array $payload): array
+    public function resend(array $payload, ?string $pixelId = null): array
     {
-        if (! $this->isConfigured()) {
-            return ['ok' => false, 'error' => 'Facebook credentials are not configured.'];
+        $destinations = $this->destinations();
+
+        // A null pixel is a log written before there was more than one
+        // destination; it belonged to the first, which is where it goes back.
+        $destination = $pixelId === null
+            ? ($destinations[0] ?? null)
+            : collect($destinations)->firstWhere('pixel_id', $pixelId);
+
+        if ($destination === null) {
+            return ['ok' => false, 'error' => $pixelId === null
+                ? 'Facebook credentials are not configured.'
+                : "Pixel {$pixelId} is no longer configured; nothing to retry against."];
         }
 
         try {
-            return $this->post($payload);
+            return $this->post($payload, $destination);
         } catch (Throwable $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
         }
+    }
+
+    /** The pixel a retry should replay a null-pixel log against. */
+    public function primaryPixelId(): ?string
+    {
+        return $this->destinations()[0]['pixel_id'] ?? null;
     }
 
     /**
@@ -275,17 +358,18 @@ class FacebookCapiService
         return max($placed, $cutoff);
     }
 
-    /** @return array{ok: bool, error: string|null} */
-    private function post(array $payload): array
+    /**
+     * @param  array{pixel_id: string, access_token: string, test_event_code: ?string}  $destination
+     * @return array{ok: bool, error: string|null}
+     */
+    private function post(array $payload, array $destination): array
     {
         $version = config('services.facebook.api_version', 'v20.0');
-        $credentials = $this->credentials();
-        $pixelId = $credentials['pixel_id'];
 
         $response = Http::asJson()
             ->timeout(10)
-            ->post("https://graph.facebook.com/{$version}/{$pixelId}/events", $payload + [
-                'access_token' => $credentials['access_token'],
+            ->post("https://graph.facebook.com/{$version}/{$destination['pixel_id']}/events", $payload + [
+                'access_token' => $destination['access_token'],
             ]);
 
         if ($response->successful()) {
@@ -295,17 +379,20 @@ class FacebookCapiService
         return ['ok' => false, 'error' => $response->body()];
     }
 
-    private function logFailure(Order $order, string $key, array $payload, ?string $error): void
+    private function logFailure(Order $order, string $key, array $payload, ?string $error, string $pixelId): void
     {
         Log::warning('[FB CAPI] event failed', [
             'order' => $order->order_number,
             'event' => FacebookEventMap::EVENT_NAMES[$key],
+            'pixel' => $pixelId,
             'error' => $error,
         ]);
 
         FbEventLog::create([
             'order_id' => $order->id,
             'event_name' => FacebookEventMap::EVENT_NAMES[$key],
+            // Which destination this owes, so the retry knows where to replay it.
+            'pixel_id' => $pixelId,
             'status' => FbEventLog::STATUS_FAILED,
             // The token is appended at send time, so nothing secret is stored.
             'payload' => $payload,

@@ -17,7 +17,7 @@ class SettingController extends Controller
     private const SECRET_FIELDS = [
         'courier_steadfast' => ['api_key', 'secret_key', 'webhook_token'],
         'sms' => ['api_key'],
-        'meta_capi' => ['access_token'],
+        'meta_capi' => ['access_token', 'access_token_2'],
     ];
 
     public function index(): JsonResponse

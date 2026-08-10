@@ -186,8 +186,18 @@ Full setup notes for the media buyer live in `docs/meta-tracking-handover.md`.
 `App\Observers\OrderObserver` is the **single trigger point** — hooking the admin controller would
 have missed the courier webhook and `courier:sync`, and hooking all three would have double-sent.
 
+- **Two pixels are supported.** `Settings → Meta CAPI` takes an optional second pixel/token pair;
+  every conversion goes to both, with the *same* `event_id`, so each pixel deduplicates its own
+  browser copy independently. A token only works against the pixel it was issued for, hence a pair
+  rather than one token for both. Everything past `FacebookCapiService::destinations()` iterates, so
+  a third is a settings field, not a rewrite.
 - **Send-once** lives in `orders.fb_events_sent`, written only *after* Meta accepts the call, so a
-  failure leaves the event still owed.
+  failure leaves the event still owed. It is keyed **per pixel** —
+  `['lead' => ['<pixel>' => true]]` — because a send can succeed for one destination and fail for
+  the other; a shared flag would mark the conversion done and the second pixel would lose that sale
+  for good. Rows written before this carry a bare `true` and count as complete for every pixel:
+  replaying history into a newly added pixel is worse, since Meta drops events past seven days and
+  `eventTime()` would restamp them with today's date.
 - **Dedup** uses `orders.fb_event_ids` — the `event_id` is generated once, stored, and handed to the
   browser in the checkout response so the GTM tag can put it in the Pixel tag's Event ID field. It is
   deliberately **not** derived from the order number any more: a media buyer wires the browser tag up

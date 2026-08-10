@@ -33,8 +33,18 @@ class FacebookDoctor extends Command
         $this->newLine();
         $this->line('<options=bold>Credentials</>');
         $this->line('  read from      : ' . $credentials['source']);
-        $this->line('  pixel id       : ' . ($credentials['pixel_id'] ?: '<fg=red>— not set —</>'));
-        $this->line('  access token   : ' . ($credentials['token'] ?: '<fg=red>— not set —</>'));
+
+        if ($credentials['pixels'] === []) {
+            $this->line('  pixel id       : <fg=red>— not set —</>');
+            $this->line('  access token   : <fg=red>— not set —</>');
+        } else {
+            foreach ($credentials['pixels'] as $i => $pixel) {
+                $label = count($credentials['pixels']) > 1 ? ' #' . ($i + 1) : '   ';
+                $this->line("  pixel{$label}      : " . $pixel['pixel_id']);
+                $this->line("  token{$label}      : " . $pixel['token']);
+            }
+        }
+
         $this->line('  test event code: ' . ($credentials['test_event_code'] ?: '(none — live reporting)'));
 
         if (! $credentials['configured']) {
@@ -73,14 +83,40 @@ class FacebookDoctor extends Command
             return self::SUCCESS;
         }
 
+        $pixels = array_column($credentials['pixels'], 'pixel_id');
+        $total = count($pixels);
+
+        /** How many of the configured pixels have accepted this event. */
+        $accepted = function (Order $order, string $key) use ($pixels): int {
+            $flag = $order->fb_events_sent[$key] ?? null;
+
+            // A legacy bare `true` predates per-pixel flags and counts as complete.
+            if ($flag === true) {
+                return count($pixels);
+            }
+
+            return count(array_filter($pixels, fn (string $pixel) => ! empty($flag[$pixel])));
+        };
+
         $this->table(
             ['Order', 'Status', 'Placed', 'Owed', 'Sent', 'Event id issued'],
-            $orders->map(function (Order $order) {
+            $orders->map(function (Order $order) use ($accepted, $total) {
                 $owedKey = FacebookEventMap::keyFor($order->status);
-                $sent = array_keys(array_filter((array) ($order->fb_events_sent ?? [])));
 
                 $owed = $owedKey ? FacebookEventMap::EVENT_NAMES[$owedKey] : '—';
-                $missing = $owedKey && ! in_array($owedKey, $sent, true);
+                $missing = $owedKey && $accepted($order, $owedKey) < $total;
+
+                // Counted per pixel, so "1/2" reads as the half-delivered
+                // conversion it is rather than as a completed one.
+                $sent = collect((array) ($order->fb_events_sent ?? []))
+                    ->keys()
+                    ->map(fn (string $key) => sprintf(
+                        '%s %d/%d',
+                        FacebookEventMap::EVENT_NAMES[$key] ?? $key,
+                        $accepted($order, $key),
+                        $total,
+                    ))
+                    ->implode(', ');
 
                 return [
                     $order->order_number,
@@ -89,10 +125,7 @@ class FacebookDoctor extends Command
                     // I just placed" is six hours out and concludes it is missing.
                     $order->created_at?->setTimezone(Clock::timezone())->format('d M h:i a'),
                     $missing ? "<fg=red>{$owed}</>" : $owed,
-                    implode(', ', array_map(
-                        fn (string $key) => FacebookEventMap::EVENT_NAMES[$key] ?? $key,
-                        $sent,
-                    )) ?: '<fg=red>none</>',
+                    $sent ?: '<fg=red>none</>',
                     implode(', ', array_keys((array) ($order->fb_event_ids ?? []))) ?: '—',
                 ];
             })->all(),
@@ -100,11 +133,16 @@ class FacebookDoctor extends Command
 
         $this->line('  A red "Owed" is an event this order should have sent and has not.');
 
+        if ($total > 1) {
+            $this->line("  \"Lead 1/{$total}\" means one pixel accepted it and the other did not —");
+            $this->line('  look under Rejected calls for which, and why.');
+        }
+
         $failures = FbEventLog::query()
             ->where('status', FbEventLog::STATUS_FAILED)
             ->latest('last_attempt_at')
             ->limit(5)
-            ->get(['event_name', 'attempt_count', 'last_attempt_at', 'error_message']);
+            ->get(['event_name', 'pixel_id', 'attempt_count', 'last_attempt_at', 'error_message']);
 
         $this->newLine();
         $this->line('<options=bold>Rejected calls</>');
@@ -137,8 +175,9 @@ class FacebookDoctor extends Command
             foreach ($failures as $failure) {
                 $this->newLine();
                 $this->line(sprintf(
-                    '  %s — attempt %d, %s',
+                    '  %s to pixel %s — attempt %d, %s',
                     $failure->event_name,
+                    $failure->pixel_id ?? '(the only one configured at the time)',
                     $failure->attempt_count,
                     $failure->last_attempt_at?->diffForHumans() ?? 'never',
                 ));

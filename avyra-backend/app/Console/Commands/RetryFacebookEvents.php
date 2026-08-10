@@ -46,7 +46,13 @@ class RetryFacebookEvents extends Command
         $recovered = 0;
 
         foreach ($logs as $log) {
-            $result = $facebook->resend($log->payload ?? []);
+            // Rows written before there was more than one destination carry no
+            // pixel; resend() sends those to the first, which is where they came
+            // from. The flag below has to agree, or the retry succeeds and the
+            // order still reads as owing the event.
+            $pixelId = $log->pixel_id ?? $facebook->primaryPixelId();
+
+            $result = $facebook->resend($log->payload ?? [], $log->pixel_id);
 
             $log->update([
                 'status' => $result['ok'] ? FbEventLog::STATUS_SUCCESS : FbEventLog::STATUS_FAILED,
@@ -63,11 +69,11 @@ class RetryFacebookEvents extends Command
 
             // Only now is the conversion really recorded, so this is where the
             // dedup flag belongs — the first attempt deliberately did not set it.
-            if ($order = $log->order) {
+            if (($order = $log->order) && $pixelId !== null) {
                 $key = array_search($log->event_name, FacebookEventMap::EVENT_NAMES, true);
 
                 if ($key !== false) {
-                    $deduper->markSent($order, $key);
+                    $deduper->markSent($order, $key, $pixelId);
                 }
             }
         }

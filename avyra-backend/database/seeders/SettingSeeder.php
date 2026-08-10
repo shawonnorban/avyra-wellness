@@ -93,10 +93,16 @@ class SettingSeeder extends Seeder
             ], true],
 
             // Server-side only — the Conversions API access token must not reach the browser.
+            // A second pixel is optional and reports the same conversions to a
+            // separate dataset — an agency's alongside the shop's own. Each needs
+            // its own token; a token only works against the pixel it was issued
+            // for. Leave the second pair blank to send to one.
             ['meta_capi', [
                 'enabled' => false,
                 'pixel_id' => '',
                 'access_token' => '',
+                'pixel_id_2' => '',
+                'access_token_2' => '',
                 'test_event_code' => '',
             ], false],
 

@@ -25,6 +25,17 @@ class FacebookTrackingTest extends TestCase
      */
     private bool $facebookRejects = false;
 
+    /**
+     * Pixel id => how many of its next calls to reject.
+     *
+     * Same reason as the flag above: a per-URL `Http::fake([...])` in a test
+     * would be merged behind the catch-all below and never match, so which pixel
+     * fails has to be decided inside the one stub.
+     *
+     * @var array<string, int>
+     */
+    private array $rejectingPixels = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -36,9 +47,27 @@ class FacebookTrackingTest extends TestCase
             'services.facebook.test_event_code' => null,
         ]);
 
-        Http::fake(fn () => $this->facebookRejects
-            ? Http::response(['error' => 'bad token'], 401)
-            : Http::response(['events_received' => 1]));
+        Http::fake(function ($request) {
+            if ($this->facebookRejects) {
+                return Http::response(['error' => 'bad token'], 401);
+            }
+
+            $pixel = $this->pixelFromUrl((string) $request->url());
+
+            if (($this->rejectingPixels[$pixel] ?? 0) > 0) {
+                $this->rejectingPixels[$pixel]--;
+
+                return Http::response(['error' => 'expired token'], 401);
+            }
+
+            return Http::response(['events_received' => 1]);
+        });
+    }
+
+    /** `https://graph.facebook.com/v20.0/<pixel>/events` → `<pixel>`. */
+    private function pixelFromUrl(string $url): string
+    {
+        return explode('/', (string) parse_url($url, PHP_URL_PATH))[2] ?? '';
     }
 
     private function order(array $attributes = []): Order
@@ -76,7 +105,9 @@ class FacebookTrackingTest extends TestCase
 
         $this->assertCount(1, $events);
         $this->assertSame('Lead', $events[0]['event_name']);
-        $this->assertTrue($order->fresh()->fb_events_sent['lead']);
+        // Keyed by pixel: a send that reached one destination and not the other
+        // must not read as complete.
+        $this->assertSame(['1234567890' => true], $order->fresh()->fb_events_sent['lead']);
     }
 
     public function test_the_funnel_fires_lead_then_purchase_then_delivered_purchase(): void
@@ -200,9 +231,11 @@ class FacebookTrackingTest extends TestCase
 
         $log = FbEventLog::where('order_id', $order->id)->firstOrFail();
 
-        $this->assertSame(FbEventLog::STATUS_SUCCESS, $log->status);
         $this->assertSame(2, $log->attempt_count);
-        $this->assertTrue($order->fresh()->fb_events_sent['lead']);
+
+        // The retry marks the flag for the pixel it actually replayed against —
+        // a log written before there was a second one belongs to the first.
+        $this->assertSame(['1234567890' => true], $order->fresh()->fb_events_sent['lead']);
     }
 
     public function test_the_retry_command_gives_up_after_the_attempt_cap(): void
@@ -446,6 +479,99 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
         $this->assertArrayNotHasKey('ln', $userData);
         // outside_dhaka is the whole rest of the country, not a city.
         $this->assertArrayNotHasKey('ct', $userData);
+    }
+
+    /** Configures a second destination alongside the .env one. */
+    private function useTwoPixels(): void
+    {
+        Setting::put('meta_capi', [
+            'enabled' => true,
+            'pixel_id' => 'PIXEL-A',
+            'access_token' => 'token-a',
+            'pixel_id_2' => 'PIXEL-B',
+            'access_token_2' => 'token-b',
+            'test_event_code' => '',
+        ]);
+    }
+
+    /** @return list<string> The pixel each recorded call was addressed to. */
+    private function calledPixels(): array
+    {
+        return collect(Http::recorded())
+            ->map(fn ($pair) => $this->pixelFromUrl((string) $pair[0]->url()))
+            ->all();
+    }
+
+    public function test_one_conversion_is_reported_to_both_pixels(): void
+    {
+        $this->useTwoPixels();
+
+        $order = $this->order();
+
+        $this->assertSame(['PIXEL-A', 'PIXEL-B'], $this->calledPixels());
+
+        // Same event_id to both, so each pixel deduplicates its own browser copy
+        // against it and the shop can reconcile one order across the pair.
+        $events = $this->sentEvents();
+        $this->assertSame($events[0]['event_id'], $events[1]['event_id']);
+
+        $this->assertSame(
+            ['PIXEL-A' => true, 'PIXEL-B' => true],
+            $order->fresh()->fb_events_sent['lead'],
+        );
+    }
+
+    /**
+     * The failure that a shared flag would cause: one pixel accepts, the flag
+     * says "sent", and the other loses the conversion for good.
+     */
+    public function test_a_pixel_that_rejects_still_owes_the_event(): void
+    {
+        $this->useTwoPixels();
+        $this->rejectingPixels = ['PIXEL-B' => 99];
+
+        $order = $this->order();
+
+        $this->assertSame(['PIXEL-A' => true], $order->fresh()->fb_events_sent['lead']);
+
+        // Logged against the pixel that failed, so the retry knows where to go.
+        $log = FbEventLog::where('order_id', $order->id)->firstOrFail();
+        $this->assertSame('PIXEL-B', $log->pixel_id);
+    }
+
+    public function test_the_retry_replays_only_to_the_pixel_that_failed(): void
+    {
+        $this->useTwoPixels();
+        // Fails once, then recovers — the case the retry exists for.
+        $this->rejectingPixels = ['PIXEL-B' => 1];
+
+        $order = $this->order();
+        $this->artisan('fb:retry-events')->assertSuccessful();
+
+        // A is untouched by the retry; only B is replayed.
+        $this->assertSame(['PIXEL-A', 'PIXEL-B', 'PIXEL-B'], $this->calledPixels());
+        $this->assertSame(
+            ['PIXEL-A' => true, 'PIXEL-B' => true],
+            $order->fresh()->fb_events_sent['lead'],
+        );
+    }
+
+    /**
+     * Adding a second pixel must not replay history into it. Facebook rejects
+     * events past seven days, and `eventTime()` would restamp them with today's
+     * date if it did not — turning old sales into today's reported revenue.
+     */
+    public function test_adding_a_pixel_does_not_resend_orders_that_predate_it(): void
+    {
+        $order = $this->order();
+        $order->forceFill(['fb_events_sent' => ['lead' => true]])->saveQuietly();
+
+        Http::fake(fn () => Http::response(['events_received' => 1]));
+        $this->useTwoPixels();
+
+        $order->update(['status' => OrderStatus::Pending]);
+
+        Http::assertNothingSent();
     }
 
     public function test_a_staff_entered_order_is_not_reported_as_a_website_conversion(): void
