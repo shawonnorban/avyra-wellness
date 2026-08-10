@@ -252,14 +252,16 @@ const GROUPS: {
     description:
       "Server-side Conversions API. Access tokens are never sent to the browser. " +
       "Fill in the second pixel only to report the same conversions to a second dataset — " +
-      "each pixel needs its own token, and leaving it blank sends to one.",
+      "each pixel needs its own token and its own test event code, and leaving them blank sends to one. " +
+      "A test event code keeps that pixel's conversions out of reporting; clear it before running real campaigns.",
     fields: [
       { name: "enabled", label: "Enabled", type: "checkbox" },
       { name: "pixel_id", label: "Pixel ID" },
       { name: "access_token", label: "Access token" },
+      { name: "test_event_code", label: "Test event code" },
       { name: "pixel_id_2", label: "Second Pixel ID (optional)" },
       { name: "access_token_2", label: "Second access token" },
-      { name: "test_event_code", label: "Test event code" },
+      { name: "test_event_code_2", label: "Second test event code" },
     ],
   },
 ];

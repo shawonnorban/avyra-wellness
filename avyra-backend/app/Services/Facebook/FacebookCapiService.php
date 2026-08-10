@@ -70,8 +70,9 @@ class FacebookCapiService
      * here, not a change to anything downstream, because everything past this
      * point already iterates.
      *
-     * The `test_event_code` is deliberately shared: it marks a whole testing
-     * session, not one destination.
+     * Each carries its own `test_event_code`: the code identifies one pixel's
+     * Test Events tab, so sharing one across both would route the second pixel's
+     * events nowhere visible.
      *
      * @return list<array{pixel_id: string, access_token: string, test_event_code: ?string}>
      */
@@ -98,7 +99,7 @@ class FacebookCapiService
             $destinations[] = [
                 'pixel_id' => (string) $stored['pixel_id_2'],
                 'access_token' => (string) $stored['access_token_2'],
-                'test_event_code' => $primary['test_event_code'],
+                'test_event_code' => ($stored['test_event_code_2'] ?? '') ?: null,
             ];
         }
 
@@ -116,17 +117,20 @@ class FacebookCapiService
      * diagnostic can never disagree with what a real send would use — which is
      * the whole reason to run it.
      *
-     * @return array{source: string, test_event_code: ?string, configured: bool,
-     *               pixels: list<array{pixel_id: string, token: string}>}
+     * @return array{source: string, configured: bool, testing: bool,
+     *               pixels: list<array{pixel_id: string, token: string, test_event_code: ?string}>}
      */
     public function describeCredentials(): array
     {
-        $credentials = $this->credentials();
+        $destinations = $this->destinations();
 
         return [
-            'source' => $credentials['source'],
-            'test_event_code' => $credentials['test_event_code'],
+            'source' => $this->credentials()['source'],
             'configured' => $this->isConfigured(),
+            // Any test code at all means some conversions are not reaching
+            // reporting, which is worth saying loudly even if only one pixel is
+            // affected — a half-tested setup is the easiest kind to forget about.
+            'testing' => collect($destinations)->contains(fn (array $d) => filled($d['test_event_code'])),
             'pixels' => array_map(fn (array $destination) => [
                 // The pixel id is not a secret — it is in the page source — and
                 // seeing it is the point: it has to match the one in the GTM tag.
@@ -136,7 +140,8 @@ class FacebookCapiService
                     6,
                     '…' . mb_substr($destination['access_token'], -4),
                 ),
-            ], $this->destinations()),
+                'test_event_code' => $destination['test_event_code'],
+            ], $destinations),
         ];
     }
 
@@ -320,9 +325,9 @@ class FacebookCapiService
             ],
         ];
 
-        if (filled($code = $this->credentials()['test_event_code'])) {
-            $payload['test_event_code'] = $code;
-        }
+        // No test_event_code here. It belongs to one pixel's Test Events tab, so
+        // it is attached per destination in post() — the payload has to stay
+        // identical across pixels, since that is what keeps the event_id shared.
 
         return $payload;
     }
@@ -366,11 +371,19 @@ class FacebookCapiService
     {
         $version = config('services.facebook.api_version', 'v20.0');
 
+        $body = $payload + ['access_token' => $destination['access_token']];
+
+        // Attached here rather than in the payload: a test event code identifies
+        // one pixel's Test Events tab, so the other pixel's code would route the
+        // event nowhere. Adding it at send time also means a retry uses whatever
+        // is configured now, not the code that was set when the call first failed.
+        if (filled($destination['test_event_code'])) {
+            $body['test_event_code'] = $destination['test_event_code'];
+        }
+
         $response = Http::asJson()
             ->timeout(10)
-            ->post("https://graph.facebook.com/{$version}/{$destination['pixel_id']}/events", $payload + [
-                'access_token' => $destination['access_token'],
-            ]);
+            ->post("https://graph.facebook.com/{$version}/{$destination['pixel_id']}/events", $body);
 
         if ($response->successful()) {
             return ['ok' => true, 'error' => null];

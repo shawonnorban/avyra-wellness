@@ -482,16 +482,51 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
     }
 
     /** Configures a second destination alongside the .env one. */
-    private function useTwoPixels(): void
+    private function useTwoPixels(array $overrides = []): void
     {
-        Setting::put('meta_capi', [
+        Setting::put('meta_capi', array_merge([
             'enabled' => true,
             'pixel_id' => 'PIXEL-A',
             'access_token' => 'token-a',
+            'test_event_code' => '',
             'pixel_id_2' => 'PIXEL-B',
             'access_token_2' => 'token-b',
-            'test_event_code' => '',
+            'test_event_code_2' => '',
+        ], $overrides));
+    }
+
+    /**
+     * A test event code names one pixel's Test Events tab, so the wrong pixel's
+     * code sends its events somewhere nobody is looking.
+     */
+    public function test_each_pixel_gets_its_own_test_event_code(): void
+    {
+        $this->useTwoPixels([
+            'test_event_code' => 'TEST-A',
+            'test_event_code_2' => 'TEST-B',
         ]);
+
+        $this->order();
+
+        $sent = collect(Http::recorded())->mapWithKeys(fn ($pair) => [
+            $this->pixelFromUrl((string) $pair[0]->url()) => $pair[0]->data()['test_event_code'] ?? null,
+        ])->all();
+
+        $this->assertSame(['PIXEL-A' => 'TEST-A', 'PIXEL-B' => 'TEST-B'], $sent);
+    }
+
+    /** One pixel can be under test while the other reports live. */
+    public function test_a_pixel_without_a_code_still_reports_live(): void
+    {
+        $this->useTwoPixels(['test_event_code' => 'TEST-A']);
+
+        $this->order();
+
+        $sent = collect(Http::recorded())->mapWithKeys(fn ($pair) => [
+            $this->pixelFromUrl((string) $pair[0]->url()) => $pair[0]->data()['test_event_code'] ?? null,
+        ])->all();
+
+        $this->assertSame(['PIXEL-A' => 'TEST-A', 'PIXEL-B' => null], $sent);
     }
 
     /** @return list<string> The pixel each recorded call was addressed to. */

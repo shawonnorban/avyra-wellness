@@ -40,12 +40,15 @@ class FacebookDoctor extends Command
         } else {
             foreach ($credentials['pixels'] as $i => $pixel) {
                 $label = count($credentials['pixels']) > 1 ? ' #' . ($i + 1) : '   ';
+                $this->newLine();
                 $this->line("  pixel{$label}      : " . $pixel['pixel_id']);
                 $this->line("  token{$label}      : " . $pixel['token']);
+                // Per pixel, because the code names one pixel's Test Events tab.
+                $this->line("  test code{$label}  : " . ($pixel['test_event_code']
+                    ? '<fg=yellow>' . $pixel['test_event_code'] . '</> — test only'
+                    : '(none — live reporting)'));
             }
         }
-
-        $this->line('  test event code: ' . ($credentials['test_event_code'] ?: '(none — live reporting)'));
 
         if (! $credentials['configured']) {
             $this->newLine();
@@ -59,10 +62,10 @@ class FacebookDoctor extends Command
 
         $this->info('  Configured — events will be attempted.');
 
-        if (filled($credentials['test_event_code'])) {
+        if ($credentials['testing']) {
             $this->newLine();
-            $this->error('  A TEST EVENT CODE IS SET — this is not live tracking.');
-            $this->line('  Every conversion lands in Events Manager > Test Events and counts for');
+            $this->error('  A TEST EVENT CODE IS SET — that pixel is not tracking live.');
+            $this->line('  Its conversions land in Events Manager > Test Events and count for');
             $this->line('  nothing: no reporting, no attribution, no ad optimisation. Fine while');
             $this->line('  you verify the setup; clear it before running real campaigns.');
         }

@@ -103,7 +103,10 @@ class SettingSeeder extends Seeder
                 'access_token' => '',
                 'pixel_id_2' => '',
                 'access_token_2' => '',
+                // One per pixel: the code names a particular pixel's Test Events
+                // tab, so the other pixel's code would send its events nowhere.
                 'test_event_code' => '',
+                'test_event_code_2' => '',
             ], false],
 
             ['fraud_detection', [
