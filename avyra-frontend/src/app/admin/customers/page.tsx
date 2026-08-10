@@ -1,10 +1,13 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, Trash2 } from "lucide-react";
 import { useState } from "react";
-import api from "@/lib/api";
+import { toast } from "sonner";
+import api, { toApiError } from "@/lib/api";
+import { useMe } from "@/lib/admin";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Badge, Card, EmptyState, Spinner } from "@/components/ui/misc";
 import { formatDate, formatTaka } from "@/lib/format";
@@ -53,6 +56,36 @@ export default function AdminCustomersPage() {
       return data.data;
     },
   });
+
+  const { data: me } = useMe();
+  const canDelete = me?.permissions.customers?.delete ?? false;
+
+  const queryClient = useQueryClient();
+
+  const removeCustomer = useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete<{ message: string }>(`/admin/customers/${id}`);
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "customers"] }),
+  });
+
+  /**
+   * The API refuses a customer who has orders, so the common case is a 422 with
+   * a readable reason rather than a deletion — surfacing it is the whole job here.
+   */
+  const confirmDelete = async (customer: CustomerRow) => {
+    if (!window.confirm(`Delete “${customer.name}”? A customer with orders cannot be deleted.`)) {
+      return;
+    }
+
+    try {
+      const result = await removeCustomer.mutateAsync(customer.id);
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(toApiError(error).message);
+    }
+  };
 
   const customers = data?.data ?? [];
 
@@ -118,6 +151,7 @@ export default function AdminCustomersPage() {
                   <th className="py-3 pr-4 text-right font-medium">Orders</th>
                   <th className="py-3 pr-4 text-right font-medium">Spent</th>
                   <th className="py-3 pr-4 font-medium">Last order</th>
+                  {canDelete && <th className="py-3 pr-4 font-medium sr-only">Actions</th>}
                 </tr>
               </thead>
 
@@ -146,6 +180,21 @@ export default function AdminCustomersPage() {
                       {formatTaka(customer.total_spent)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">{formatDate(customer.last_order_date)}</td>
+
+                    {canDelete && (
+                      <td className="py-3 pr-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => confirmDelete(customer)}
+                          disabled={removeCustomer.isPending}
+                          aria-label={`Delete ${customer.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

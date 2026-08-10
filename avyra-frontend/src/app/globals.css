@@ -142,7 +142,12 @@
   --font-display: var(--font-rethink), system-ui, sans-serif;
   --font-body: var(--font-rethink), system-ui, sans-serif;
 
-  --radius-sm: calc(var(--radius) - 4px);
+  /* The shadcn scale subtracts from --radius, which assumes the usual 0.5rem.
+     Ours is 0.25rem, so `calc(var(--radius) - 4px)` underflowed to 0 and every
+     `rounded-sm` in the app — buttons, inputs, badges — rendered perfectly
+     square despite asking to be rounded. Pinned to Tailwind's own 2px instead,
+     so the class means what it says at any --radius. */
+  --radius-sm: 0.125rem;
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
 }

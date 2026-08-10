@@ -87,6 +87,9 @@ export function useRecentOrders() {
           total: number;
           status: string;
           order_date: string;
+          /** Website, Landing Page, or POS for one a staff member took by phone. */
+          order_source: string | null;
+          created_at: string | null;
         }[];
       }>("/admin/dashboard/recent-orders");
       return data.data;

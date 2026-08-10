@@ -77,7 +77,10 @@ class DashboardController extends Controller
     public function recentOrders(): JsonResponse
     {
         $orders = Order::latest('created_at')->limit(10)->get([
-            'id', 'order_number', 'customer_name', 'phone', 'total', 'status', 'order_date',
+            // `created_at` carries the clock time; `order_date` is a date column
+            // and would render every row at midnight.
+            'id', 'order_number', 'customer_name', 'phone', 'total', 'status',
+            'order_date', 'order_source', 'created_at',
         ]);
 
         return response()->json(['data' => $orders]);

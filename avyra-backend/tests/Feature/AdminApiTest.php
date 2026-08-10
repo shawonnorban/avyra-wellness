@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Models\CampaignVisit;
+use App\Models\Customer;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -113,6 +114,47 @@ class AdminApiTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseMissing('orders', ['id' => $order->id]);
+    }
+
+    /**
+     * `orders.customer_id` has no `onDelete`, so the database would refuse this
+     * with a foreign-key error — a 500 where the operator needs a reason. The
+     * controller checks first; this pins that it keeps doing so, now that the
+     * admin has a delete button pointed at it.
+     */
+    public function test_a_customer_with_orders_cannot_be_deleted(): void
+    {
+        $order = $this->orderWithItem($this->product());
+        $customer = Customer::create([
+            'code' => 'CUS-TEST01',
+            'name' => 'Has Orders',
+            'type' => 'Guest',
+            'phone' => '01711111111',
+        ]);
+        $order->forceFill(['customer_id' => $customer->id])->save();
+
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->deleteJson("/api/admin/customers/{$customer->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'This customer has orders and cannot be deleted.');
+
+        $this->assertDatabaseHas('customers', ['id' => $customer->id]);
+    }
+
+    public function test_a_customer_without_orders_can_be_deleted(): void
+    {
+        $customer = Customer::create([
+            'code' => 'CUS-TEST02',
+            'name' => 'No Orders',
+            'type' => 'Guest',
+            'phone' => '01722222222',
+        ]);
+
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->deleteJson("/api/admin/customers/{$customer->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('customers', ['id' => $customer->id]);
     }
 
     public function test_only_an_admin_can_read_settings(): void

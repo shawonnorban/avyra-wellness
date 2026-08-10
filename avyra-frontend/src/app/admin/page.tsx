@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { Badge, Card, Spinner, statusTone } from "@/components/ui/misc";
-import { formatDate, formatTaka } from "@/lib/format";
+import { formatDate, formatTaka, formatTime } from "@/lib/format";
 import { useDashboard, useRecentOrders, useRevenueChart, useSiteVisits } from "@/lib/admin";
 
 type Tone = "primary" | "info" | "success" | "warning" | "danger" | "neutral";
@@ -169,65 +169,6 @@ export default function AdminDashboardPage() {
           <StatTile key={tile.label} {...tile} />
         ))}
       </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Revenue chart — a plain CSS bar chart, no charting dependency needed. */}
-        <Card className="lg:col-span-2">
-          <h2 className="text-base font-semibold text-foreground">Revenue, last 30 days</h2>
-
-          {!chart || chart.length === 0 ? (
-            <p className="mt-8 text-center text-sm text-muted-foreground">No settled orders yet.</p>
-          ) : (
-            <div className="mt-6 flex h-48 items-end gap-1">
-              {chart.map((day) => (
-                <div
-                  key={day.date}
-                  className="group relative flex-1 rounded-t bg-primary/30 transition-colors hover:bg-primary/60"
-                  style={{ height: `${Math.max(4, (day.revenue / maxRevenue) * 100)}%` }}
-                >
-                  <span className="pointer-events-none absolute -top-9 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-[11px] text-white group-hover:block">
-                    {formatDate(day.date)} · {formatTaka(day.revenue)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Stock value
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {formatTaka(stats.inventory.stock_value)}
-                </p>
-              </div>
-              <Wallet className="h-5 w-5 text-primary" aria-hidden />
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Needs restocking
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {stats.inventory.low_stock + stats.inventory.out_of_stock}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {stats.inventory.out_of_stock} out of stock, {stats.inventory.low_stock} low
-                </p>
-              </div>
-              <PackageX className="h-5 w-5 text-warning" aria-hidden />
-            </div>
-          </Card>
-        </div>
-      </div>
-
       <Card>
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Recent orders</h2>
@@ -243,6 +184,7 @@ export default function AdminDashboardPage() {
                 <th className="pb-2 pr-4 font-medium">Order</th>
                 <th className="pb-2 pr-4 font-medium">Customer</th>
                 <th className="pb-2 pr-4 font-medium">Date</th>
+                <th className="pb-2 pr-4 font-medium">Source</th>
                 <th className="pb-2 pr-4 font-medium">Status</th>
                 <th className="pb-2 text-right font-medium">Total</th>
               </tr>
@@ -262,7 +204,19 @@ export default function AdminDashboardPage() {
                     {order.customer_name}
                     <span className="block text-xs text-muted-foreground">{order.phone}</span>
                   </td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(order.order_date)}</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">
+                    {formatDate(order.order_date)}
+                    {/* The clock time comes from `created_at`; `order_date` is a
+                        date column and renders every row at midnight. */}
+                    <span className="block text-xs">{formatTime(order.created_at)}</span>
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    {/* Where the order came from: Website, Landing Page, or POS
+                        for one a staff member took over the phone. */}
+                    <Badge tone={order.order_source === "POS" ? "neutral" : "info"}>
+                      {order.order_source ?? "Unknown"}
+                    </Badge>
+                  </td>
                   <td className="py-2.5 pr-4">
                     <Badge tone={statusTone(order.status)}>{order.status}</Badge>
                   </td>
