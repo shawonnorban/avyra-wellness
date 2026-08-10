@@ -66,7 +66,7 @@ export function CampaignOrderForm({
   const [variantId, setVariantId] = useState<string | null>(variants[0]?.id ?? null);
   const [quantity, setQuantity] = useState(1);
   const [zone, setZone] = useState<DeliveryZone>("inside_dhaka");
-  const [form, setForm] = useState({ customer_name: "", phone: "", address: "" });
+  const [form, setForm] = useState({ customer_name: "", phone: "", address: "", email: "" });
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [blocked, setBlocked] = useState<string | null>(null);
@@ -130,6 +130,9 @@ export function CampaignOrderForm({
       const order = await placeOrder.mutateAsync({
         customer_name: form.customer_name,
         phone: normalizePhone(form.phone),
+        // Omitted rather than sent blank: the API validates it as an email when
+        // present, and "" is not one.
+        ...(form.email.trim() ? { email: form.email.trim() } : {}),
         address: form.address,
         delivery_zone: zone,
         payment_method: "COD",
@@ -247,6 +250,22 @@ export function CampaignOrderForm({
                   required
                   autoComplete="tel"
                   placeholder="01XXXXXXXXX"
+                />
+              </div>
+
+              {/* Optional on purpose. An email raises Meta's match quality a
+                  long way, but a required field on a cash-on-delivery landing
+                  page costs orders — and an order is worth more than a match. */}
+              <div>
+                <label className="f-label bn" htmlFor="lp-email">ইমেইল (ঐচ্ছিক)</label>
+                <input
+                  id="lp-email"
+                  type="email"
+                  className="f-input"
+                  value={form.email}
+                  onChange={update("email")}
+                  autoComplete="email"
+                  placeholder="you@example.com"
                 />
               </div>
 

@@ -69,9 +69,10 @@ That is intended — `Lead` is what campaigns optimise against and needs a value
 but it means **`Lead` value and `Purchase` value must never be summed**. They are
 one order's money reported at two stages.
 
-There is also a `page_view` push on every route change, because App Router
-navigations do not reload the page and GTM's History Change trigger is otherwise
-the only thing that sees them.
+There is **no** `page_view` push. The Pixel's own PageView fires once per real
+page load and not again as the visitor moves between pages — by request, so that
+reaching `/order-success` after an order does not send a second one. Do not add a
+tag on GTM's History Change trigger to reintroduce it.
 
 ---
 

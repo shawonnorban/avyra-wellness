@@ -20,10 +20,13 @@ declare global {
 export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
 
 /**
- * Event names pushed to the dataLayer. The three Meta ones mirror the event they
- * drive; `page_view` is the App Router navigation, which GTM cannot see by itself.
+ * Event names pushed to the dataLayer, each mirroring the Meta event it drives.
+ *
+ * No `page_view`: the Pixel's own PageView on a real page load is all the shop
+ * wants, and a virtual one on every App Router navigation was firing again on
+ * /order-success straight after an order.
  */
-export type GtmEvent = "ViewContent" | "InitiateCheckout" | "Lead" | "page_view";
+export type GtmEvent = "ViewContent" | "InitiateCheckout" | "Lead";
 
 /**
  * Pushes an event. Safe before GTM has loaded — the snippet creates the array

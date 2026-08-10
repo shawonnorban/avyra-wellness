@@ -166,6 +166,15 @@ loop and, being custom, needs a Custom Conversion before it can drive optimisati
 `ViewContent` and `InitiateCheckout` are browser-only: they happen before an order exists, so there is
 nothing to carry an `event_id` and no server copy to deduplicate against.
 
+**No virtual `page_view` is pushed on navigation.** There was one, so a Pixel PageView tag could fire
+on App Router route changes; the shop did not want a second PageView on reaching `/order-success`
+after ordering, so it was removed. Nothing depends on it — the three events above are each pushed
+explicitly. Restoring it means a pathname effect in `components/gtm.tsx`, nowhere else.
+
+**The data layer is cumulative**, so `pushEvent` clears every event-scoped key the current payload
+omits (`EVENT_SCOPED_KEYS` in `lib/gtm.ts`). Without that, a `{{DLV - value}}` on the `Lead` tag read
+the unit price `ViewContent` had left behind — ৳1490 against a ৳1540 order.
+
 **`InitiateCheckout` marks intent, not submission.** It fires from `pushInitiateCheckout()` on an
 order CTA, on first focus inside `CampaignOrderForm`, or on arriving at `/checkout` with a cart —
 **once per product per tab**, guarded by a module-level `Set` in `lib/gtm.ts`. It used to sit at the

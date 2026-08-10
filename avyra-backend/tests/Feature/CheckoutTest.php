@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\OrderStatus;
 use App\Models\BlockedPhone;
 use App\Models\Coupon;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderRiskScore;
 use App\Models\Product;
@@ -216,5 +217,51 @@ class CheckoutTest extends TestCase
         $prefix = 'AVY-' . now()->format('Ymd');
 
         $this->assertSame(["{$prefix}-0001", "{$prefix}-0002"], $numbers);
+    }
+
+    /**
+     * Email was only captured when the customer record was created, so a repeat
+     * buyer offering one for the first time lost it — and it is the strongest
+     * signal Meta can match a conversion on after the phone number.
+     */
+    public function test_a_returning_customer_can_still_supply_an_email(): void
+    {
+        $product = $this->product();
+        $this->disableFraudChecks();
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product))->assertCreated();
+        $this->assertNull(Customer::where('phone', '01711223344')->value('email'));
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product, [
+            'email' => 'rahim@example.com',
+        ]))->assertCreated();
+
+        $this->assertSame('rahim@example.com', Customer::where('phone', '01711223344')->value('email'));
+    }
+
+    /** Leaving the optional field blank must not wipe an address already on file. */
+    public function test_an_omitted_email_does_not_erase_the_stored_one(): void
+    {
+        $product = $this->product();
+        $this->disableFraudChecks();
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product, [
+            'email' => 'rahim@example.com',
+        ]))->assertCreated();
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product))->assertCreated();
+
+        $this->assertSame('rahim@example.com', Customer::where('phone', '01711223344')->value('email'));
+    }
+
+    /**
+     * Two orders from one phone are a repeat-order block by design. These tests
+     * are about what the second order stores, not about the fraud gate.
+     */
+    private function disableFraudChecks(): void
+    {
+        $config = Setting::get('fraud_detection');
+        $config['enabled'] = false;
+        Setting::put('fraud_detection', $config);
     }
 }

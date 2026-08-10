@@ -412,6 +412,42 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
             ->assertExitCode(0);
     }
 
+    /**
+     * Event match quality decides whether a conversion is attributed to an ad at
+     * all, and name, city and country were sitting on every order unsent.
+     */
+    public function test_every_matchable_field_on_the_order_is_hashed_and_sent(): void
+    {
+        $this->order([
+            'customer_name' => 'Shawon Noor Rahman',
+            'delivery_zone' => 'inside_dhaka',
+        ]);
+
+        $userData = $this->sentEvents()[0]['user_data'];
+
+        $this->assertSame([hash('sha256', 'shawon')], $userData['fn']);
+        // Everything after the first token, so a middle name is not discarded.
+        $this->assertSame([hash('sha256', 'noor rahman')], $userData['ln']);
+        $this->assertSame([hash('sha256', 'dhaka')], $userData['ct']);
+        $this->assertSame([hash('sha256', 'bd')], $userData['country']);
+    }
+
+    /**
+     * A wrong hash is a failed match that dilutes the signal, so a field the
+     * order cannot actually supply is omitted rather than guessed.
+     */
+    public function test_a_single_word_name_sends_no_family_name(): void
+    {
+        $this->order(['customer_name' => 'Shawon', 'delivery_zone' => 'outside_dhaka']);
+
+        $userData = $this->sentEvents()[0]['user_data'];
+
+        $this->assertSame([hash('sha256', 'shawon')], $userData['fn']);
+        $this->assertArrayNotHasKey('ln', $userData);
+        // outside_dhaka is the whole rest of the country, not a city.
+        $this->assertArrayNotHasKey('ct', $userData);
+    }
+
     public function test_a_staff_entered_order_is_not_reported_as_a_website_conversion(): void
     {
         $this->order(['status' => OrderStatus::Confirm, 'order_source' => 'POS']);

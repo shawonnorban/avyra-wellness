@@ -22,6 +22,20 @@ use Throwable;
  */
 class OrderObserver
 {
+    /**
+     * Wait for the surrounding transaction before telling Facebook anything.
+     *
+     * `updateStatus()` wraps the write in a transaction, so without this the
+     * Conversions API call — a network round trip with a ten-second timeout —
+     * ran *inside* it, holding row locks open across the internet while the
+     * admin's request waited on Meta.
+     *
+     * The correctness half matters more: a rollback after the write left Meta
+     * already told about a status change that never happened, and the send-once
+     * flag set, so the real change would later send nothing.
+     */
+    public bool $afterCommit = true;
+
     public function __construct(private readonly FacebookCapiService $facebook)
     {
     }

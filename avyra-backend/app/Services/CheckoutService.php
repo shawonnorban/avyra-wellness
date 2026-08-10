@@ -220,7 +220,18 @@ class CheckoutService
 
         if ($customer) {
             // Keep the latest address on file without overwriting a name they set before.
-            $customer->update(['address' => $data['address']]);
+            $attributes = ['address' => $data['address']];
+
+            // Fill a gap, never clobber. Email was only ever captured when the
+            // customer record was first created, so a returning buyer supplying
+            // one for the first time silently lost it — and after the phone it is
+            // the strongest signal Meta can match a conversion on. Leaving the
+            // optional field blank still must not erase an address already held.
+            if (blank($customer->email) && filled($data['email'] ?? null)) {
+                $attributes['email'] = $data['email'];
+            }
+
+            $customer->update($attributes);
 
             return $customer;
         }

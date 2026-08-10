@@ -218,6 +218,14 @@ class FacebookCapiService
                         'em' => filled($email = $order->customer?->email)
                             ? [$this->hash($email)]
                             : null,
+                        // Name, city and country are already on every order and
+                        // were simply not being sent. Each one Meta can match on
+                        // raises the event match quality, which is what decides
+                        // whether a conversion is attributed to an ad at all.
+                        'fn' => ($first = $this->firstName($order)) ? [$this->hash($first)] : null,
+                        'ln' => ($last = $this->lastName($order)) ? [$this->hash($last)] : null,
+                        'ct' => ($city = $this->city($order)) ? [$this->hash($city)] : null,
+                        'country' => [$this->hash('bd')],
                         'fbc' => $order->fbc ?: null,
                         'fbp' => $order->fbp ?: null,
                         'client_ip_address' => $order->ip_address ?: null,
@@ -305,6 +313,40 @@ class FacebookCapiService
             'attempt_count' => 1,
             'last_attempt_at' => now(),
         ]);
+    }
+
+    /**
+     * The parts of `customer_name` Meta can match on.
+     *
+     * One free-text field is all the checkout collects, so the first whitespace
+     * separated token is taken as the given name and the remainder as the family
+     * name. A single-word name yields no `ln` rather than a duplicated `fn` —
+     * a wrong hash matches nothing and only dilutes the signal.
+     */
+    private function firstName(Order $order): ?string
+    {
+        $parts = preg_split('/\s+/', trim((string) $order->customer_name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return $parts[0] ?? null;
+    }
+
+    private function lastName(Order $order): ?string
+    {
+        $parts = preg_split('/\s+/', trim((string) $order->customer_name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : null;
+    }
+
+    /**
+     * City, but only when the order actually says so.
+     *
+     * `inside_dhaka` is a fact; `outside_dhaka` covers the whole rest of the
+     * country and naming a city there would be a guess. Meta treats a wrong hash
+     * as a failed match, so silence is worth more than a plausible invention.
+     */
+    private function city(Order $order): ?string
+    {
+        return $order->delivery_zone === 'inside_dhaka' ? 'dhaka' : null;
     }
 
     /**

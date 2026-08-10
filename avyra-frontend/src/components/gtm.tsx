@@ -1,8 +1,6 @@
 "use client";
 
 import Script from "next/script";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 import { GTM_ID, pushEvent } from "@/lib/gtm";
 
 /**
@@ -17,22 +15,16 @@ import { GTM_ID, pushEvent } from "@/lib/gtm";
  *
  * With `NEXT_PUBLIC_GTM_ID` unset nothing renders and `pushEvent` is a harmless
  * no-op, so development and preview builds carry no tracking at all.
+ *
+ * **No virtual page view is pushed on navigation**, by request. App Router
+ * navigations do not reload the page, so the Pixel's own PageView fires once per
+ * real page load and not again as the visitor moves around — in particular not
+ * on reaching /order-success after ordering, which is what the shop objected to.
+ * Nothing else depends on it: ViewContent, InitiateCheckout and Lead are each
+ * pushed explicitly at the moment they happen. Restoring it means pushing
+ * `page_view` from a pathname effect here, nowhere else.
  */
 export function GoogleTagManager() {
-  const pathname = usePathname();
-
-  // App Router navigations do not reload the page, so GTM's own History Change
-  // trigger is the only thing that would see them. Pushing a virtual page view
-  // gives the container something explicit to hang a Pixel PageView on.
-  // Goes through pushEvent so that arriving on a new page also clears the
-  // product and order keys the previous page left in the data layer; pushing
-  // straight to window.dataLayer here would carry them across the navigation.
-  useEffect(() => {
-    if (!GTM_ID) return;
-
-    pushEvent("page_view", { page_path: pathname });
-  }, [pathname]);
-
   if (!GTM_ID) return null;
 
   return (
