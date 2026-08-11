@@ -685,9 +685,14 @@
 
 .lp .form-header h3 {
   font-family: var(--font-anek-bangla), "Anek Bangla", sans-serif;
-  font-size: clamp(15px, 2.5vw, 20px);
+  /* 25px on a phone, 40px from ~1000px up, scaling between. */
+  font-size: clamp(25px, 4vw, 40px);
   font-weight: 700;
-  color: #fff;
+  /* Not var(--orange): .lp-wide remaps that slot to the brand coral #d86450,
+     which reaches only ~2.6:1 against the #0b4451 header — under the 3:1 floor
+     for large text. The true orange clears it at ~4.2:1. */
+  color: #f97316;
+  line-height: 1.3;
   position: relative;
   z-index: 1;
 }
