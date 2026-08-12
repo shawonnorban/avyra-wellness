@@ -173,7 +173,7 @@ export function CampaignOrderForm({
     <form onSubmit={submit} onFocusCapture={() => pushInitiateCheckout(product)}>
       <div className="form-header">
         <span className="lp-form-badge bn">📦 অর্ডার ফর্ম</span>
-        <h3 className="bn">সারা বাংলাদেশে ডেলিভারি ফ্রি</h3>
+        <h3 className="bn">ডেলিভারি চার্জ একদম ফ্রি</h3>
       </div>
 
       <div className="form-body">
