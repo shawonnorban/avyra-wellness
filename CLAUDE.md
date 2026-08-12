@@ -344,6 +344,11 @@ Ported from the previous build, not reinvented. Everything lives in
 - Browser-only state (language, sidebar collapse) is read with `useStoredValue`
   (`useSyncExternalStore`), so SSR and hydration agree without a post-mount re-render.
 
+> **Deploying the frontend:** the server runs the compiled `.next`, never `src/`, and cannot
+> build it itself (cPanel's 4 GB cap kills `next build`). So it is built here and shipped as
+> `next-build.zip`, which is tracked in git. A `git pull` alone updates the source and changes
+> nothing a visitor sees. Full procedure in `docs/frontend-build.md`.
+
 > **Editing files on Windows:** do not bulk-rewrite sources with PowerShell 5.1 —
 > `Get-Content`/`Set-Content` round-trip UTF-8 through the ANSI codepage and corrupt the
 > Bengali strings. Use the editing tools or `sed`.
