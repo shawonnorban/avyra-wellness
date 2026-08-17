@@ -58,6 +58,14 @@ class OrderObserver
 
     private function dispatchFor(Order $order): void
     {
+        // A sale rung up over the counter reached no advertising. Reporting it
+        // would credit campaigns with revenue they had no part in, and Meta
+        // would learn from a "conversion" no ad produced — worse than silence,
+        // because it trains the optimiser on noise.
+        if ($order->isShopSale()) {
+            return;
+        }
+
         $key = FacebookEventMap::keyFor($order->status);
 
         // hold, fake and cancel deliberately send nothing — they are internal

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -17,11 +17,28 @@ type Line = { product_id: string; variant_id: string; quantity: string; unit_pri
 const BLANK_LINE: Line = { product_id: "", variant_id: "", quantity: "1", unit_price: "" };
 
 /**
- * POS-style order entry. The customer record is created inline by the API from
- * the phone number, so staff never have to leave this form.
+ * Staff order entry, for both a phone order and a counter sale.
+ *
+ * One form rather than two: the fields are identical, and the only thing that
+ * differs is the `order_source` it stamps — which decides whether the order is
+ * reported to Meta and which panel it appears in. `?source=Shop` selects the
+ * counter sale; anything else is a phone order.
+ *
+ * The customer record is created inline by the API from the phone number, so
+ * staff never have to leave this form.
  */
 export default function NewOrderPage() {
+  // useSearchParams needs a Suspense boundary so the rest can prerender.
+  return (
+    <Suspense fallback={null}>
+      <NewOrder />
+    </Suspense>
+  );
+}
+
+function NewOrder() {
   const router = useRouter();
+  const isShopSale = useSearchParams().get("source") === "Shop";
   const create = useCreateOrder();
   const { data: productPage } = useAdminProducts({});
   const { data: warehouses } = useWarehouses();
@@ -114,10 +131,15 @@ export default function NewOrderPage() {
         delivery_charge: Number(form.delivery_charge || 0),
         discount: Number(form.discount || 0),
         notes: form.notes || null,
+        // Omitted for a phone order so the API applies its own default rather
+        // than this form having an opinion about what that default is.
+        ...(isShopSale ? { order_source: "Shop" } : {}),
         items,
       });
 
-      toast.success(`Order ${order.order_number} created`);
+      toast.success(
+        isShopSale ? `Shop sale ${order.order_number} recorded` : `Order ${order.order_number} created`,
+      );
       router.replace(`/admin/orders/${order.id}`);
     } catch (err) {
       const parsed = toApiError(err);
@@ -132,16 +154,20 @@ export default function NewOrderPage() {
     <form onSubmit={submit} className="space-y-5">
       <div className="flex items-center gap-3">
         <Link
-          href="/admin/orders"
+          href={isShopSale ? "/admin/shop-orders" : "/admin/orders"}
           className="rounded-sm p-2 text-muted-foreground hover:bg-secondary"
-          aria-label="Back to orders"
+          aria-label={isShopSale ? "Back to shop orders" : "Back to orders"}
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">New order</h1>
+          <h1 className="text-2xl font-semibold text-foreground">
+            {isShopSale ? "New shop sale" : "New order"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Entered by staff — it skips the fraud check and starts as Confirmed.
+            {isShopSale
+              ? "Sold over the counter — it skips the fraud check, starts as Confirmed, and is not reported to Facebook."
+              : "Entered by staff — it skips the fraud check and starts as Confirmed."}
           </p>
         </div>
       </div>

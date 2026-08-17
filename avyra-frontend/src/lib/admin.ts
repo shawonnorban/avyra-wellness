@@ -101,6 +101,12 @@ export function useRecentOrders() {
 
 export type OrderFilters = {
   status?: string;
+  /**
+   * Website · Landing Page · POS · Shop. Shop sales are hidden from this
+   * endpoint unless named here — which is how the Shop Orders panel is served
+   * without an endpoint of its own.
+   */
+  source?: string;
   search?: string;
   from?: string;
   to?: string;

@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   ShoppingBag,
   ShoppingCart,
+  Store,
   Truck,
   UserCircle,
   X,
@@ -47,6 +48,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics", module: "dashboard" },
   { label: "Shop", icon: ShoppingBag, path: "/shop", external: true },
   { label: "Order", icon: ShoppingCart, path: "/admin/orders", module: "sales" },
+  // Counter sales, kept out of Sales & Orders: they have no delivery, no
+  // courier and no advertising behind them, and they send nothing to Meta.
+  { label: "Shop Order", icon: Store, path: "/admin/shop-orders", module: "sales" },
   { label: "Customers", icon: UserCircle, path: "/admin/customers", module: "customers" },
   { label: "Courier", icon: Truck, path: "/admin/courier", module: "courier" },
   { label: "Purchase", icon: Receipt, path: "/admin/purchase", module: "purchase" },

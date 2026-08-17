@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
@@ -20,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderController extends Controller
@@ -105,6 +107,10 @@ class OrderController extends Controller
             'phone' => ['required', 'string', 'max:32'],
             'address' => ['required', 'string', 'max:1000'],
             'email' => ['nullable', 'email', 'max:255'],
+            // Only the two a human can pick. Website and Landing Page belong to
+            // the checkout, and accepting either here would let a staff-entered
+            // order pose as one in the reports.
+            'order_source' => ['nullable', Rule::in(OrderSource::staffEntered())],
             'delivery_zone' => ['nullable', 'in:inside_dhaka,outside_dhaka'],
             'warehouse_id' => ['nullable', 'uuid', 'exists:warehouses,id'],
             'payment_method' => ['required', 'string', 'max:30'],
@@ -145,7 +151,7 @@ class OrderController extends Controller
                 'discount' => $validated['discount'] ?? 0,
                 'notes' => $validated['notes'] ?? null,
                 'status' => OrderStatus::Confirm, // staff-entered orders skip the fraud gate
-                'order_source' => 'POS',
+                'order_source' => $validated['order_source'] ?? OrderSource::Pos->value,
                 'created_by' => $request->user()->id,
             ]);
 
@@ -243,7 +249,14 @@ class OrderController extends Controller
      */
     public function statusCounts(Request $request): JsonResponse
     {
-        $counts = Order::query()
+        // Scoped the same way as the list these tabs filter, or every tab would
+        // promise more rows than clicking it produces.
+        $shopOnly = $request->string('source')->value() === OrderSource::Shop->value;
+
+        $scope = fn () => Order::query()
+            ->when($shopOnly, fn ($q) => $q->shopSalesOnly(), fn ($q) => $q->excludingShopSales());
+
+        $counts = $scope()
             ->when($request->filled('from'), fn ($q) => $q->whereDate('order_date', '>=', $request->date('from')))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('order_date', '<=', $request->date('to')))
             ->groupBy('status')
@@ -256,7 +269,7 @@ class OrderController extends Controller
                 'total' => $all->sum(),
                 // Its own tab in the orders list, so it is counted here rather
                 // than derived from a status.
-                'today' => Order::whereDate('order_date', Clock::today())->count(),
+                'today' => $scope()->whereDate('order_date', Clock::today())->count(),
             ],
         ]);
     }
@@ -301,6 +314,13 @@ class OrderController extends Controller
     private function filtered(Request $request)
     {
         return Order::query()
+            // Shop sales are hidden unless asked for by name, so the Sales &
+            // Orders list stays what it is for — the orders that need
+            // confirming, dispatching and chasing. `?source=Shop` is what the
+            // Shop Order panel sends, and it is how that panel is served without
+            // a second endpoint.
+            ->unless($request->string('source')->value() === OrderSource::Shop->value,
+                fn ($q) => $q->excludingShopSales())
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('source'), fn ($q) => $q->where('order_source', $request->string('source')))
             ->when($request->filled('from'), fn ($q) => $q->whereDate('order_date', '>=', $request->date('from')))

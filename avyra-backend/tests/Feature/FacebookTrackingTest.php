@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Models\FbEventLog;
 use App\Models\Order;
@@ -613,6 +614,33 @@ public function test_the_settings_panel_overrides_the_env_credentials(): void
     {
         $this->order(['status' => OrderStatus::Confirm, 'order_source' => 'POS']);
 
+        $this->assertSame('phone_call', $this->sentEvents()[0]['action_source']);
+    }
+
+    /**
+     * A sale rung up over the counter reached no advertising, so reporting it
+     * would credit campaigns with revenue they had no part in — and train the
+     * optimiser on a conversion no ad produced.
+     */
+    public function test_a_shop_sale_sends_nothing_to_meta(): void
+    {
+        $order = $this->order([
+            'status' => OrderStatus::Confirm,
+            'order_source' => OrderSource::Shop->value,
+        ]);
+
+        $order->update(['status' => OrderStatus::Delivered]);
+
+        Http::assertNothingSent();
+        $this->assertNull($order->fresh()->fb_events_sent);
+    }
+
+    /** A phone order is still a conversion, just not a browser one. */
+    public function test_a_phone_order_is_still_reported(): void
+    {
+        $this->order(['status' => OrderStatus::Confirm, 'order_source' => OrderSource::Pos->value]);
+
+        $this->assertSame('Purchase', $this->sentEvents()[0]['event_name']);
         $this->assertSame('phone_call', $this->sentEvents()[0]['action_source']);
     }
 

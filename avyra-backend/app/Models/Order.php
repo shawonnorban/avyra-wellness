@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Support\Clock;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,6 +47,31 @@ class Order extends Model
             // worked, not against a clock six hours behind them.
             $order->order_date ??= Clock::today();
         });
+    }
+
+    /** A sale rung up over the counter: no delivery, no courier, no advertising. */
+    public function isShopSale(): bool
+    {
+        return $this->order_source === OrderSource::Shop->value;
+    }
+
+    /**
+     * Everything the sales team works from — the online orders and the phone
+     * orders taken for them. Shop sales have their own panel, and mixing them in
+     * would make the courier, fraud and delivery figures beside them meaningless.
+     */
+    public function scopeExcludingShopSales(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->where('order_source', '!=', OrderSource::Shop->value)
+            // Rows written before order_source existed, and any the checkout
+            // failed to stamp, are online orders — not shop sales.
+            ->orWhereNull('order_source'));
+    }
+
+    public function scopeShopSalesOnly(Builder $query): Builder
+    {
+        return $query->where('order_source', OrderSource::Shop->value);
     }
 
     /**

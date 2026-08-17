@@ -14,9 +14,20 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    /**
+     * Where the shop-sale line is drawn on this screen.
+     *
+     * The status tiles are a work queue — they link straight into Sales &
+     * Orders, so counting rows that list does not show would promise work that
+     * is not there. Revenue and stock are not queues: money taken over the
+     * counter is still money, and the goods still left the shelf, so those stay
+     * whole-business.
+     */
     public function index(): JsonResponse
     {
-        $byStatus = Order::selectRaw('status, count(*) as total')
+        $byStatus = Order::query()
+            ->excludingShopSales()
+            ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
 
@@ -26,7 +37,7 @@ class DashboardController extends Controller
             'data' => [
                 'orders' => [
                     'total' => (int) $byStatus->sum(),
-                    'today' => Order::whereDate('order_date', Clock::today())->count(),
+                    'today' => Order::excludingShopSales()->whereDate('order_date', Clock::today())->count(),
                     'confirmed' => $count(OrderStatus::Confirm),
                     'delivered' => $count(OrderStatus::Delivered),
                     'cancelled' => $count(OrderStatus::Cancel),
@@ -76,7 +87,8 @@ class DashboardController extends Controller
 
     public function recentOrders(): JsonResponse
     {
-        $orders = Order::latest('created_at')->limit(10)->get([
+        // Mirrors the Sales & Orders list this table's "View all" leads to.
+        $orders = Order::excludingShopSales()->latest('created_at')->limit(10)->get([
             // `created_at` carries the clock time; `order_date` is a date column
             // and would render every row at midnight.
             'id', 'order_number', 'customer_name', 'phone', 'total', 'status',

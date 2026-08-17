@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Models\CampaignVisit;
@@ -155,6 +156,85 @@ class AdminApiTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseMissing('customers', ['id' => $customer->id]);
+    }
+
+    /**
+     * Sales & Orders is a work queue — confirm, dispatch, chase. A counter sale
+     * has none of that, and mixing them in makes the courier and delivery
+     * figures beside them meaningless.
+     */
+    public function test_shop_sales_are_hidden_from_the_orders_list(): void
+    {
+        $product = $this->product();
+        $online = $this->orderWithItem($product);
+        $shop = $this->orderWithItem($product);
+        $shop->forceFill(['order_source' => OrderSource::Shop->value])->save();
+
+        $manager = $this->userWithRole(Role::Manager);
+
+        $numbers = $this->actingAs($manager)->getJson('/api/admin/orders')
+            ->assertOk()->json('data.*.order_number');
+
+        $this->assertSame([$online->order_number], $numbers);
+
+        // Its own panel asks for them by name, which is how it is served without
+        // a second endpoint.
+        $shopNumbers = $this->actingAs($manager)->getJson('/api/admin/orders?source=Shop')
+            ->assertOk()->json('data.*.order_number');
+
+        $this->assertSame([$shop->order_number], $shopNumbers);
+    }
+
+    /** The tabs filter that list, so they have to count the same rows it shows. */
+    public function test_status_counts_follow_the_list_they_filter(): void
+    {
+        $product = $this->product();
+        $this->orderWithItem($product);
+        $shop = $this->orderWithItem($product);
+        $shop->forceFill(['order_source' => OrderSource::Shop->value])->save();
+
+        $manager = $this->userWithRole(Role::Manager);
+
+        $this->assertSame(1, $this->actingAs($manager)
+            ->getJson('/api/admin/orders/status-counts')->json('data.total'));
+
+        $this->assertSame(1, $this->actingAs($manager)
+            ->getJson('/api/admin/orders/status-counts?source=Shop')->json('data.total'));
+    }
+
+    public function test_a_staff_member_can_record_a_shop_sale(): void
+    {
+        $product = $this->product();
+
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->postJson('/api/admin/orders', [
+                'customer_name' => 'Walk In',
+                'phone' => '01733333333',
+                'address' => 'Counter',
+                'payment_method' => 'Cash',
+                'order_source' => OrderSource::Shop->value,
+                'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.order_source', OrderSource::Shop->value);
+    }
+
+    /** Only the two a human can pick; the rest belong to the checkout. */
+    public function test_a_staff_entered_order_cannot_pose_as_a_website_order(): void
+    {
+        $product = $this->product();
+
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->postJson('/api/admin/orders', [
+                'customer_name' => 'Faker',
+                'phone' => '01744444444',
+                'address' => 'Nowhere',
+                'payment_method' => 'Cash',
+                'order_source' => 'Website',
+                'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('order_source');
     }
 
     public function test_only_an_admin_can_read_settings(): void
