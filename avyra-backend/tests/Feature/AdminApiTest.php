@@ -237,6 +237,31 @@ class AdminApiTest extends TestCase
             ->assertJsonValidationErrors('order_source');
     }
 
+    /**
+     * The cap has to match the gallery field's `max` in the admin settings form.
+     * When they drift, the form happily accepts a slide the save then rejects,
+     * and the operator sees a 422 with no idea which image caused it.
+     */
+    public function test_the_campaign_slider_accepts_fifty_slides_and_no_more(): void
+    {
+        $admin = $this->userWithRole(Role::Admin);
+        $paths = fn (int $n) => array_map(fn (int $i) => "landing/slide-{$i}.webp", range(1, $n));
+
+        // Fifty is within the cap, so the array-size rule stays quiet. The paths
+        // are not registered uploads, so each one still fails on its own — which
+        // is what proves the size rule is not what rejected them.
+        $this->actingAs($admin)
+            ->putJson('/api/admin/settings/campaign_slider', ['value' => ['images' => $paths(50)]])
+            ->assertStatus(422)
+            ->assertJsonMissingValidationErrors('value.images')
+            ->assertJsonValidationErrors('value.images.0');
+
+        $this->actingAs($admin)
+            ->putJson('/api/admin/settings/campaign_slider', ['value' => ['images' => $paths(51)]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('value.images');
+    }
+
     public function test_only_an_admin_can_read_settings(): void
     {
         $this->actingAs($this->userWithRole(Role::Manager))

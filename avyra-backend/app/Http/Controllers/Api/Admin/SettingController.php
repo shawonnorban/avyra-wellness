@@ -51,8 +51,12 @@ class SettingController extends Controller
         }
 
         // Every slide likewise: a registered upload, not a link to somewhere else.
+        // The cap is a sanity bound, not a design limit — it exists so a runaway
+        // client cannot post an unbounded array. Keep it in step with the
+        // gallery field's `max` in the admin settings form, or the form accepts
+        // a slide the save then rejects.
         if ($key === 'campaign_slider') {
-            $rules['value.images'] = ['sometimes', 'array', 'max:12'];
+            $rules['value.images'] = ['sometimes', 'array', 'max:50'];
             $rules['value.images.*'] = [new StoredImagePath()];
         }
 

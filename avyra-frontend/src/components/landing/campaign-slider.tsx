@@ -46,21 +46,37 @@ export function CampaignSlider({
   // the end for one frame.
   const current = index % count;
 
+  /**
+   * Only the slide showing and its two neighbours are in the DOM.
+   *
+   * Every slide sits at `inset: 0` with `opacity: 0`, which means it is inside
+   * the viewport — and `loading="lazy"` does not defer an image that is in the
+   * viewport. So mounting all of them downloaded all of them at once: harmless
+   * at three slides, several megabytes at fifty, on the one page that takes the
+   * order. Three keeps the crossfade working in both directions while the page
+   * costs the same whatever the shop uploads. Coming back to a slide re-mounts
+   * it, but the browser has it cached by then.
+   */
+  const isNear = (i: number) =>
+    i === current || i === (current + 1) % count || i === (current - 1 + count) % count;
+
   return (
     <div className="lp-slider">
       <div className="lp-slider-frame">
-        {images.map((src, i) => (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            key={src}
-            src={src}
-            alt={i === current ? alt : ""}
-            className={`lp-slide ${i === current ? "on" : ""}`}
-            // Only the first slide is worth blocking render for.
-            loading={i === 0 ? "eager" : "lazy"}
-            aria-hidden={i !== current}
-          />
-        ))}
+        {images.map((src, i) =>
+          isNear(i) ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              key={src}
+              src={src}
+              alt={i === current ? alt : ""}
+              className={`lp-slide ${i === current ? "on" : ""}`}
+              // Only the slide actually showing is worth blocking render for.
+              loading={i === current ? "eager" : "lazy"}
+              aria-hidden={i !== current}
+            />
+          ) : null,
+        )}
       </div>
 
       {/* Outside the frame on purpose: over the artwork they would sit on top of

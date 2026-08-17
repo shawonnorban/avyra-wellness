@@ -1521,6 +1521,9 @@
 /* Below the frame, not over it — see the note in campaign-slider.tsx. */
 .lp .lp-slider-dots {
   display: flex;
+  /* Fifty slides is fifty dots. Without wrapping they overflow the panel and
+     push the layout sideways; with it they stack into tidy rows. */
+  flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin-top: 12px;

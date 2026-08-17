@@ -162,7 +162,9 @@ const GROUPS: {
         label: "Slides",
         type: "gallery",
         folder: "landing",
-        max: 12,
+        // Must match the `value.images` array rule in the admin SettingController,
+        // or the form accepts a slide that the save then rejects with a 422.
+        max: 50,
         hint: "Drop images here or click Add. Portrait or square works best — each one is cropped to the height of the order form.",
       },
       {
