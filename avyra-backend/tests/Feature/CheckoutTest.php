@@ -255,6 +255,73 @@ class CheckoutTest extends TestCase
     }
 
     /**
+     * The reported "some orders skip the discount" is this: the discount is a
+     * flat amount off the charge, not a waiver. Inside Dhaka it happens to equal
+     * the charge and delivery lands at zero; outside, the larger charge leaves a
+     * remainder, and the same settings produce two different totals.
+     */
+    public function test_the_flat_delivery_discount_leaves_a_remainder_outside_dhaka(): void
+    {
+        $product = $this->product(['sell_price' => 1540]);
+
+        Setting::put('delivery', [
+            'inside_dhaka_charge' => 60,
+            'outside_dhaka_charge' => 120,
+            'free_delivery_above' => null,
+            'delivery_discount_enabled' => true,
+            'delivery_discount' => 60,
+        ]);
+        $this->disableFraudChecks();
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product, [
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'delivery_zone' => 'inside_dhaka',
+        ]))->assertCreated();
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product, [
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'delivery_zone' => 'outside_dhaka',
+        ]))->assertCreated();
+
+        $totals = Order::orderBy('order_number')->pluck('total', 'delivery_zone');
+
+        // 1540 + 60 − 60. Delivery reads as free, which is what the page promises.
+        $this->assertSame('1540.00', $totals['inside_dhaka']);
+
+        // 1540 + 120 − 60. The discount *was* applied; it just did not cover the
+        // whole charge, so the buyer still pays 60 towards delivery.
+        $this->assertSame('1600.00', $totals['outside_dhaka']);
+    }
+
+    /** Making it genuinely free everywhere means the discount must cover the charge. */
+    public function test_delivery_is_free_everywhere_once_the_discount_covers_the_larger_charge(): void
+    {
+        $product = $this->product(['sell_price' => 1540]);
+
+        Setting::put('delivery', [
+            'inside_dhaka_charge' => 60,
+            'outside_dhaka_charge' => 120,
+            'free_delivery_above' => null,
+            'delivery_discount_enabled' => true,
+            'delivery_discount' => 120,
+        ]);
+        $this->disableFraudChecks();
+
+        $this->postJson('/api/storefront/checkout', $this->payload($product, [
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'delivery_zone' => 'outside_dhaka',
+        ]))->assertCreated();
+
+        // Never negative: the inside charge is smaller than the discount.
+        $this->postJson('/api/storefront/checkout', $this->payload($product, [
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'delivery_zone' => 'inside_dhaka',
+        ]))->assertCreated();
+
+        $this->assertSame(['1540.00', '1540.00'], Order::orderBy('order_number')->pluck('total')->all());
+    }
+
+    /**
      * Two orders from one phone are a repeat-order block by design. These tests
      * are about what the second order stores, not about the fraud gate.
      */
