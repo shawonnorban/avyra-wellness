@@ -40,3 +40,17 @@ export const ORDER_STATUS_STYLES: Record<string, string> = {
   cancel: "bg-red-50 text-red-700 border-red-200",
   delivered: "bg-teal-50 text-teal-700 border-teal-200",
 };
+
+/**
+ * Statuses a staff member has to justify.
+ *
+ * These three are judgements about the *customer* rather than milestones the
+ * order passed through — someone decided this order was fake, or worth holding,
+ * or not worth fulfilling. Six months later the status alone says nothing about
+ * why, and it is the one thing that cannot be reconstructed from the record.
+ */
+export const STATUSES_NEEDING_REASON: readonly string[] = ["hold", "fake", "cancel"];
+
+export function statusNeedsReason(status: string): boolean {
+  return STATUSES_NEEDING_REASON.includes(status);
+}

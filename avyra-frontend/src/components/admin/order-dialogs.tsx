@@ -14,6 +14,7 @@ import {
   useUpdateOrder,
 } from "@/lib/admin";
 import { formatDateTime, formatTaka } from "@/lib/format";
+import { orderStatusLabel } from "@/lib/order-status";
 import type { AdminOrder } from "@/lib/types";
 
 const PAYMENT_METHODS = ["COD", "Cash", "bKash", "Nagad", "Rocket", "Bank Transfer", "Card"];
@@ -522,3 +523,75 @@ function EditForm({
   );
 }
 
+
+/* ---------- Status remark ---------- */
+
+/**
+ * Asks why, before an order is marked hold, fake or cancelled.
+ *
+ * Those three are judgements rather than milestones, and the remark is the only
+ * part of them that cannot be reconstructed later — so it is required here
+ * rather than offered. The other statuses change straight from the dropdown; a
+ * confirmation nobody has anything to type into is just a click in the way.
+ *
+ * Closing without saving leaves the order untouched. The dropdown behind is
+ * controlled by the order's own status, so it snaps back on its own.
+ */
+export function StatusReasonDialog({
+  order,
+  status,
+  saving,
+  onCancel,
+  onConfirm,
+}: {
+  order: AdminOrder;
+  status: string;
+  saving: boolean;
+  onCancel: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState(order.status_reason ?? "");
+
+  const trimmed = reason.trim();
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (trimmed) onConfirm(trimmed);
+  };
+
+  return (
+    <Modal
+      title={`Mark ${order.order_number} as ${orderStatusLabel(status)}`}
+      subtitle="The remark is shown beside the status in the orders list."
+      width="max-w-lg"
+      onClose={onCancel}
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Remarks" required>
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={4}
+            // Matches the API's `max:255`, so the limit is felt while typing
+            // rather than arriving as a validation error after the fact.
+            maxLength={255}
+            autoFocus
+            placeholder="Why is this order being marked so? e.g. wrong number, customer asked to wait"
+          />
+        </Field>
+
+        <p className="text-xs text-muted-foreground">{trimmed.length}/255</p>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!trimmed || saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            OK
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}

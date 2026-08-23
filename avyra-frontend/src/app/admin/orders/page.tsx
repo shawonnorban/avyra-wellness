@@ -23,7 +23,11 @@ import { twMerge } from "tailwind-merge";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { Card, EmptyState, Spinner } from "@/components/ui/misc";
-import { OrderEditDialog, OrderViewDialog } from "@/components/admin/order-dialogs";
+import {
+  OrderEditDialog,
+  OrderViewDialog,
+  StatusReasonDialog,
+} from "@/components/admin/order-dialogs";
 import { toApiError } from "@/lib/api";
 import { openInvoice } from "@/lib/invoice";
 import { useStorefrontSettings } from "@/lib/queries";
@@ -42,6 +46,7 @@ import {
   ORDER_STATUSES,
   ORDER_STATUS_STYLES,
   orderStatusLabel,
+  statusNeedsReason,
 } from "@/lib/order-status";
 
 const STATUSES = ORDER_STATUSES;
@@ -83,6 +88,7 @@ function OrdersView() {
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<AdminOrder | null>(null);
   const [editing, setEditing] = useState<AdminOrder | null>(null);
+  const [reasonFor, setReasonFor] = useState<{ order: AdminOrder; status: string } | null>(null);
 
   const { data: settings } = useStorefrontSettings();
   const { data, isLoading, isFetching } = useAdminOrders(filters);
@@ -116,10 +122,30 @@ function OrdersView() {
   const toggleAll = () =>
     setSelected((prev) => (prev.length === orders.length ? [] : orders.map((o) => o.id)));
 
+  /**
+   * Hold, fake and cancel ask why first; the rest change straight away.
+   *
+   * Nothing is sent until the remark is given, so closing the dialog leaves the
+   * order as it was — and the dropdown, being controlled by the order's own
+   * status, snaps back on its own.
+   */
   const changeStatus = async (id: string, status: string) => {
+    if (statusNeedsReason(status)) {
+      const order = orders.find((o) => o.id === id);
+      if (order) {
+        setReasonFor({ order, status });
+        return;
+      }
+    }
+
+    await applyStatus(id, status);
+  };
+
+  const applyStatus = async (id: string, status: string, reason?: string) => {
     try {
-      await updateStatus.mutateAsync({ id, status });
-      toast.success(`Order marked ${status}`);
+      await updateStatus.mutateAsync({ id, status, reason });
+      toast.success(`Order marked ${orderStatusLabel(status)}`);
+      setReasonFor(null);
     } catch (error) {
       toast.error(toApiError(error).message);
     }
@@ -366,6 +392,16 @@ function OrdersView() {
 
       {viewing && <OrderViewDialog orderId={viewing.id} onClose={() => setViewing(null)} />}
       {editing && <OrderEditDialog order={editing} onClose={() => setEditing(null)} />}
+
+      {reasonFor && (
+        <StatusReasonDialog
+          order={reasonFor.order}
+          status={reasonFor.status}
+          saving={updateStatus.isPending}
+          onCancel={() => setReasonFor(null)}
+          onConfirm={(reason) => applyStatus(reasonFor.order.id, reasonFor.status, reason)}
+        />
+      )}
     </div>
   );
 }

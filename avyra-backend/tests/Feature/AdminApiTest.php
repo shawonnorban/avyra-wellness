@@ -262,6 +262,34 @@ class AdminApiTest extends TestCase
             ->assertJsonValidationErrors('value.images');
     }
 
+    /**
+     * Hold, fake and cancel are judgements about the customer, and the remark is
+     * the part of them that cannot be reconstructed later. The admin now insists
+     * on one, so the round trip has to hold it.
+     */
+    public function test_a_status_change_stores_and_returns_its_remark(): void
+    {
+        $order = $this->orderWithItem($this->product());
+        $manager = $this->userWithRole(Role::Manager);
+
+        $this->actingAs($manager)
+            ->patchJson("/api/admin/orders/{$order->id}/status", [
+                'status' => OrderStatus::Hold->value,
+                'reason' => 'ফোন নম্বর ভুল',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status_reason', 'ফোন নম্বর ভুল');
+
+        // Cleared when the order moves on: a stale "wrong phone number" beside a
+        // confirmed order is worse than none.
+        $this->actingAs($manager)
+            ->patchJson("/api/admin/orders/{$order->id}/status", [
+                'status' => OrderStatus::Confirm->value,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status_reason', null);
+    }
+
     public function test_only_an_admin_can_read_settings(): void
     {
         $this->actingAs($this->userWithRole(Role::Manager))
