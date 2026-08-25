@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useState } from "react";
 import { AvyraFooter } from "@/components/avyra/avyra-footer";
 import { CustomerReviews } from "@/components/avyra/customer-reviews";
 import {
@@ -15,6 +16,7 @@ import { CampaignOrderForm } from "@/components/landing/landing-order-form";
 import { PurchasePopup } from "@/components/landing/purchase-popup";
 import { pushInitiateCheckout } from "@/lib/gtm";
 import { useProduct, useStorefrontSettings } from "@/lib/queries";
+import type { ProductDetail, StorefrontSettings } from "@/lib/types";
 import { youtubeEmbed } from "@/lib/youtube";
 import { PRODUCT_SLUG, VIDEO_URL, copy } from "./copy";
 import "../lp/landing.css";
@@ -27,9 +29,18 @@ import "../lp/landing.css";
  * It sits outside the (storefront) route group on purpose, so none of the brand
  * header or navigation is applied; only the footer is shared.
  */
-export function CampaignPage() {
-  const { data: product } = useProduct(PRODUCT_SLUG);
-  const { data: settings } = useStorefrontSettings();
+export function CampaignPage({
+  initialProduct,
+  initialSettings,
+}: {
+  initialProduct?: ProductDetail;
+  initialSettings?: StorefrontSettings;
+}) {
+  const { data: productData } = useProduct(PRODUCT_SLUG);
+  const { data: settingsData } = useStorefrontSettings();
+  const product = productData ?? initialProduct;
+  const settings = settingsData ?? initialSettings;
+  const [videoStarted, setVideoStarted] = useState(false);
 
   const orderRef = useRef<HTMLElement>(null);
 
@@ -182,13 +193,32 @@ export function CampaignPage() {
             </div>
 
             <div className="card vc-video" style={{ maxWidth: 1120, margin: "0 auto" }}>
-              <iframe
-                src={youtubeEmbed(VIDEO_URL)}
-                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                allowFullScreen
-                allow="autoplay; encrypted-media"
-                title={copy.video.title}
-              />
+              {videoStarted ? (
+                <iframe
+                  src={youtubeEmbed(VIDEO_URL)}
+                  style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                  allowFullScreen
+                  allow="autoplay; encrypted-media"
+                  title={copy.video.title}
+                />
+              ) : (
+                <button
+                  type="button"
+                  aria-label="ভিডিও চালু করুন"
+                  onClick={() => setVideoStarted(true)}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    background: "var(--ink)",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 48,
+                  }}
+                >
+                  ▶
+                </button>
+              )}
             </div>
           </Reveal>
         </section>

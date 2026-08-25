@@ -73,6 +73,7 @@ export function CampaignSlider({
               className={`lp-slide ${i === current ? "on" : ""}`}
               // Only the slide actually showing is worth blocking render for.
               loading={i === current ? "eager" : "lazy"}
+              fetchPriority={i === current ? "high" : "auto"}
               aria-hidden={i !== current}
             />
           ) : null,

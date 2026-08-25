@@ -71,6 +71,7 @@
 
 .lp-th-logo {
   height: clamp(44px, 6.2vw, 98px);
+  aspect-ratio: 1;
   width: auto;
   object-fit: contain;
   flex-shrink: 0;
@@ -91,6 +92,7 @@
 
 .lp-th-banner {
   height: clamp(24px, 5.2vw, 62px);
+  aspect-ratio: 8.3;
   width: auto;
   max-width: 42%;
   object-fit: contain;
