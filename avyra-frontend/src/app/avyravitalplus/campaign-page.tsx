@@ -6,10 +6,6 @@ import { CustomerReviews } from "@/components/avyra/customer-reviews";
 import {
   AvyraFaq,
   BuyHrefProvider,
-  HomeFromNature,
-  HomeJustBegin,
-  HomeProductShowcase,
-  HomeReconnect,
 } from "@/components/avyra/home-sections";
 import { LanguageLock } from "@/components/language-provider";
 import { ViewContentTracker } from "@/components/view-content-tracker";
