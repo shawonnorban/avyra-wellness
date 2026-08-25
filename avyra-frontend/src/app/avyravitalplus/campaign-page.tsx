@@ -202,13 +202,14 @@ export function CampaignPage() {
           `font-sans` restores the brand typeface: `.lp` sets Sora for the campaign
           layout, which would otherwise cascade into these.
           Their buy buttons point at this page's own form rather than
-          /shop/vital-plus, so a click never leaves the campaign. */}
+          /shop/vital-plus, so a click never leaves the campaign.
+
+          HomeFromNature, HomeProductShowcase, HomeReconnect and HomeJustBegin
+          are deliberately not here. They are the brand's story, and this page
+          exists to take an order — they pushed the buyer further from the form
+          and brought a couple of megabytes of scenery with them. */}
       <BuyHrefProvider href="#order-form">
         <div className="font-sans">
-          <HomeFromNature />
-          <HomeProductShowcase />
-          <HomeReconnect />
-          <HomeJustBegin />
           <CustomerReviews />
           <AvyraFaq />
         </div>
