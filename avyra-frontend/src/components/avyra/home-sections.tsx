@@ -40,7 +40,7 @@ export function HomeHero() {
     <section ref={ref} className="relative h-[100svh] min-h-[560px] md:min-h-[640px] overflow-hidden">
       <motion.div style={{ y, scale }} className="absolute inset-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${A}/hero-man.jpg`} alt="Avyra wellness" className="w-full h-full object-cover" />
+        <img src={`${A}/hero-man.webp`} alt="Avyra wellness" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/50" />
       </motion.div>
 
@@ -56,7 +56,7 @@ export function HomeHero() {
 
         <div className="col-span-12 self-end flex flex-col items-start md:items-center text-left md:text-center">
           <motion.img
-            src={`${A}/avyra-wordmark.png`}
+            src={`${A}/avyra-wordmark.webp`}
             alt="AVYRA"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -112,9 +112,9 @@ export function HomeValueProps() {
   const { t } = useLanguage();
 
   const props = [
-    { icon: `${A}/icon-sprout.png`, key: "about.vp1" },
-    { icon: `${A}/icon-lotus.png`, key: "about.vp2" },
-    { icon: `${A}/icon-balance.png`, key: "about.vp3" },
+    { icon: `${A}/icon-sprout.webp`, key: "about.vp1" },
+    { icon: `${A}/icon-lotus.webp`, key: "about.vp2" },
+    { icon: `${A}/icon-balance.webp`, key: "about.vp3" },
   ];
 
   return (
@@ -133,14 +133,14 @@ export function HomeValueProps() {
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${A}/tree-vector.png`}
+        src={`${A}/tree-vector.webp`}
         alt=""
         aria-hidden
         className="absolute left-0 top-32 md:top-20 w-20 md:w-40 opacity-40 -rotate-12 -translate-x-4 md:-translate-x-8 pointer-events-none select-none"
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${A}/tree-vector.png`}
+        src={`${A}/tree-vector.webp`}
         alt=""
         aria-hidden
         className="absolute right-0 top-8 md:top-4 w-20 md:w-40 opacity-40 rotate-12 translate-x-4 md:translate-x-8 pointer-events-none select-none scale-x-[-1]"
@@ -201,7 +201,7 @@ export function HomeFamilyBanner() {
     <section className="relative w-full">
       <Reveal className="relative w-full overflow-hidden aspect-[4/3] md:aspect-[1330/789]">
         <motion.img
-          src={`${A}/family-home.png`}
+          src={`${A}/family-home.webp`}
           alt="Happy family"
           className="absolute inset-0 w-full h-full object-cover"
           initial={{ scale: 1.1 }}
@@ -212,7 +212,7 @@ export function HomeFamilyBanner() {
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/family-mask.png`}
+          src={`${A}/family-mask.webp`}
           alt=""
           aria-hidden
           className="absolute inset-0 w-full h-full object-cover object-bottom pointer-events-none select-none opacity-50 mix-blend-screen"
@@ -284,14 +284,14 @@ function IngredientItem({
 }
 
 const INGREDIENTS: IngredientCfg[] = [
-  { src: `${A}/ing-mastic.png`, left: "1.5%", top: "34%", width: "7.5%", rot: -8, dx: -40, dy: 0, start: 0.1, end: 0.45 },
-  { src: `${A}/ing-cinnamon.png`, left: "13%", top: "66%", width: "8.9%", rot: -4, dx: -30, dy: 40, start: 0.15, end: 0.5 },
-  { src: `${A}/ing-rosemary.png`, left: "21%", top: "8%", width: "5.9%", rot: 8, dx: 0, dy: -40, start: 0.12, end: 0.47 },
-  { src: `${A}/ing-sprout.png`, left: "32%", top: "4%", width: "9.5%", rot: 0, dx: 0, dy: -30, start: 0.2, end: 0.55 },
-  { src: `${A}/ing-fern.png`, left: "49%", top: "22%", width: "6.4%", rot: 5, dx: 0, dy: -30, start: 0.25, end: 0.6 },
-  { src: `${A}/ing-cardamom.png`, left: "69%", top: "8%", width: "6.9%", rot: 3, dx: 0, dy: -30, start: 0.28, end: 0.62 },
-  { src: `${A}/ing-honey.png`, left: "95%", top: "30%", width: "11.4%", rot: 4, dx: 40, dy: 0, start: 0.22, end: 0.58 },
-  { src: `${A}/ing-leaf-large.png`, left: "85%", top: "82%", width: "5%", rot: -6, dx: 30, dy: 30, start: 0.32, end: 0.65 },
+  { src: `${A}/ing-mastic.webp`, left: "1.5%", top: "34%", width: "7.5%", rot: -8, dx: -40, dy: 0, start: 0.1, end: 0.45 },
+  { src: `${A}/ing-cinnamon.webp`, left: "13%", top: "66%", width: "8.9%", rot: -4, dx: -30, dy: 40, start: 0.15, end: 0.5 },
+  { src: `${A}/ing-rosemary.webp`, left: "21%", top: "8%", width: "5.9%", rot: 8, dx: 0, dy: -40, start: 0.12, end: 0.47 },
+  { src: `${A}/ing-sprout.webp`, left: "32%", top: "4%", width: "9.5%", rot: 0, dx: 0, dy: -30, start: 0.2, end: 0.55 },
+  { src: `${A}/ing-fern.webp`, left: "49%", top: "22%", width: "6.4%", rot: 5, dx: 0, dy: -30, start: 0.25, end: 0.6 },
+  { src: `${A}/ing-cardamom.webp`, left: "69%", top: "8%", width: "6.9%", rot: 3, dx: 0, dy: -30, start: 0.28, end: 0.62 },
+  { src: `${A}/ing-honey.webp`, left: "95%", top: "30%", width: "11.4%", rot: 4, dx: 40, dy: 0, start: 0.22, end: 0.58 },
+  { src: `${A}/ing-leaf-large.webp`, left: "85%", top: "82%", width: "5%", rot: -6, dx: 30, dy: 30, start: 0.32, end: 0.65 },
 ];
 
 export function HomeFromNature() {
@@ -330,7 +330,7 @@ export function HomeFromNature() {
           style={{ width: "105%", transform: "translate(-50%, -50%) rotate(0.5deg)" }}
         >
           <motion.img
-            src={`${A}/coral-ribbon.png`}
+            src={`${A}/coral-ribbon.webp`}
             alt=""
             className="w-full h-auto"
             style={{
@@ -352,7 +352,7 @@ export function HomeFromNature() {
           style={{ width: "27%", maxWidth: "506px", transform: "translate(-14%, -24%)" }}
         >
           <motion.img
-            src={`${A}/ing-vital-badge.png`}
+            src={`${A}/ing-vital-badge.webp`}
             alt="Vital Plus — Avyra Wellness"
             className="w-full h-auto block"
             style={{ transformOrigin: "center", rotate: badgeRotate, scale: badgeScale, opacity: badgeOpacity }}
@@ -415,29 +415,29 @@ export function HomeProductShowcase() {
   }, []);
 
   const leftChips = [
-    { label: t("about.chipCashew"), icon: `${A}/ing-cardamom.png`, reverse: false },
-    { label: t("about.chipHoney"), icon: `${A}/ing-honey.png`, reverse: true },
-    { label: t("about.chipAshwagandha"), icon: `${A}/ing-leaf-large.png`, reverse: false },
+    { label: t("about.chipCashew"), icon: `${A}/ing-cardamom.webp`, reverse: false },
+    { label: t("about.chipHoney"), icon: `${A}/ing-honey.webp`, reverse: true },
+    { label: t("about.chipAshwagandha"), icon: `${A}/ing-leaf-large.webp`, reverse: false },
   ];
 
   const rightChips = [
-    { label: t("about.chipPine"), icon: `${A}/ing-sprout.png` },
-    { label: t("about.chipMastic"), icon: `${A}/ing-mastic.png` },
-    { label: t("about.chipOtherNatural"), icon: `${A}/ing-fern.png` },
+    { label: t("about.chipPine"), icon: `${A}/ing-sprout.webp` },
+    { label: t("about.chipMastic"), icon: `${A}/ing-mastic.webp` },
+    { label: t("about.chipOtherNatural"), icon: `${A}/ing-fern.webp` },
   ];
 
   const pack = (
     <div className="relative w-full max-w-[240px] md:max-w-[450px] overflow-visible">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${A}/vital-plus-box.png`}
+        src={`${A}/vital-plus-box.webp`}
         alt="Avyra Vital Plus product box"
         className={`w-full h-auto drop-shadow-2xl transition-opacity duration-1000 ease-in-out ${flip ? "opacity-0" : "opacity-100"}`}
         draggable={false}
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${A}/vital-plus-box-hover.png`}
+        src={`${A}/vital-plus-box-hover.webp`}
         alt="Avyra Vital Plus packaging"
         className={`absolute bottom-0 left-0 w-full h-auto drop-shadow-2xl transition-opacity duration-1000 ease-in-out ${flip ? "opacity-100" : "opacity-0"}`}
         draggable={false}

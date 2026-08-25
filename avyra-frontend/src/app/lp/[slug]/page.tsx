@@ -112,10 +112,10 @@ export default function LandingPageView({ params }: { params: Promise<{ slug: st
       />
 
       <LpTopHeader
-        logo="/avyra/lp-logo.png"
-        wordmark="/avyra/lp-banner.png"
+        logo="/avyra/lp-logo.webp"
+        wordmark="/avyra/lp-banner.webp"
         title="এর এনার্জেটিক দুনিয়ায় স্বাগতম"
-        patternUrl="/avyra/lp-topbg.png"
+        patternUrl="/avyra/lp-topbg.webp"
       />
 
       {scrollText && <div className="ann bn">{scrollText}</div>}

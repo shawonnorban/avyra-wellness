@@ -140,7 +140,7 @@ export function AvyraFooter() {
       <motion.div style={{ scale, y }} className="relative px-2 select-none pointer-events-none flex justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/avyra/avyra-wordmark.png"
+          src="/avyra/avyra-wordmark.webp"
           alt="AVYRA"
           className="w-[90%] md:w-[85%] max-w-[1000px] h-auto"
           draggable={false}

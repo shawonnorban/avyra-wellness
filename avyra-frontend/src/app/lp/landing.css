@@ -1210,7 +1210,7 @@
   --sr: 0 8px 24px rgba(216, 100, 80, 0.26);
 
   /* The same tile the top header uses, carried across the whole page. */
-  background: var(--bg) url("/avyra/lp-topbg.png") repeat;
+  background: var(--bg) url("/avyra/lp-topbg.webp") repeat;
 }
 
 /* A few borders and tints in the base sheet are hard-coded rgba rather than

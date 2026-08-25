@@ -67,10 +67,10 @@ export function CampaignPage() {
 
 
       <LpTopHeader
-        logo="/avyra/lp-logo.png"
-        wordmark="/avyra/lp-banner.png"
+        logo="/avyra/lp-logo.webp"
+        wordmark="/avyra/lp-banner.webp"
         title={copy.header.slogan}
-        patternUrl="/avyra/lp-topbg.png"
+        patternUrl="/avyra/lp-topbg.webp"
       />
 
       {scrollText && <div className="ann bn">{scrollText}</div>}

@@ -35,12 +35,12 @@ function BuyNow({ light = false }: { light?: boolean }) {
 }
 
 const INGREDIENTS = [
-  { icon: `${A}/ing-sprout.png`, title: "vp.ingPineNuts", desc: "vp.ingPineNutsDesc" },
-  { icon: `${A}/ing-cardamom.png`, title: "vp.ingCashew", desc: "vp.ingCashewDesc" },
-  { icon: `${A}/ing-honey.png`, title: "vp.ingHoney", desc: "vp.ingHoneyDesc" },
-  { icon: `${A}/ing-leaf-large.png`, title: "vp.ingAshwagandha", desc: "vp.ingAshwagandhaDesc" },
-  { icon: `${A}/ing-mastic.png`, title: "vp.ingMastic", desc: "vp.ingMasticDesc" },
-  { icon: `${A}/ing-fern.png`, title: "vp.ingOther", desc: "vp.ingOtherDesc" },
+  { icon: `${A}/ing-sprout.webp`, title: "vp.ingPineNuts", desc: "vp.ingPineNutsDesc" },
+  { icon: `${A}/ing-cardamom.webp`, title: "vp.ingCashew", desc: "vp.ingCashewDesc" },
+  { icon: `${A}/ing-honey.webp`, title: "vp.ingHoney", desc: "vp.ingHoneyDesc" },
+  { icon: `${A}/ing-leaf-large.webp`, title: "vp.ingAshwagandha", desc: "vp.ingAshwagandhaDesc" },
+  { icon: `${A}/ing-mastic.webp`, title: "vp.ingMastic", desc: "vp.ingMasticDesc" },
+  { icon: `${A}/ing-fern.webp`, title: "vp.ingOther", desc: "vp.ingOtherDesc" },
 ];
 
 export default function VitalPlusPage() {
@@ -89,14 +89,14 @@ export default function VitalPlusPage() {
       <section className="relative overflow-hidden bg-white py-20 md:py-28">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/tree-vector.png`}
+          src={`${A}/tree-vector.webp`}
           alt=""
           aria-hidden
           className="pointer-events-none select-none absolute top-0 left-0 w-28 md:w-40 opacity-60"
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/tree-vector.png`}
+          src={`${A}/tree-vector.webp`}
           alt=""
           aria-hidden
           className="pointer-events-none select-none absolute top-0 right-0 w-28 md:w-40 opacity-60 -scale-x-100"
@@ -140,14 +140,14 @@ export default function VitalPlusPage() {
       <section className="relative overflow-hidden bg-avyra-teal-light py-20 md:py-28">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/tree-vector.png`}
+          src={`${A}/tree-vector.webp`}
           alt=""
           aria-hidden
           className="pointer-events-none select-none absolute bottom-0 left-0 w-28 md:w-40 opacity-50"
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/tree-vector.png`}
+          src={`${A}/tree-vector.webp`}
           alt=""
           aria-hidden
           className="pointer-events-none select-none absolute bottom-0 right-0 w-28 md:w-40 opacity-50 -scale-x-100"
@@ -203,14 +203,14 @@ export default function VitalPlusPage() {
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/tree-vector.png`}
+          src={`${A}/tree-vector.webp`}
           alt=""
           aria-hidden
           className="pointer-events-none select-none absolute top-8 left-0 w-28 md:w-40 opacity-40"
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${A}/tree-vector.png`}
+          src={`${A}/tree-vector.webp`}
           alt=""
           aria-hidden
           className="pointer-events-none select-none absolute top-8 right-0 w-28 md:w-40 opacity-40 -scale-x-100"
