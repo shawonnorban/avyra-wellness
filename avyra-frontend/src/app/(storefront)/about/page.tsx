@@ -6,7 +6,7 @@ import { Reveal } from "@/components/avyra/reveal";
 import { useLanguage } from "@/components/language-provider";
 
 // Hosted on the brand's own CDN, as in the previous build.
-const HERO_URL = "https://rpropertybd.com/public/about.png";
+const HERO_URL = "/avyra/about.webp";
 
 export default function OurStoryPage() {
   const { t } = useLanguage();

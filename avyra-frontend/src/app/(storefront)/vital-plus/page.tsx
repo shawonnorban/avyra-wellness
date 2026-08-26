@@ -11,10 +11,10 @@ const A = "/avyra";
 const BUY_HREF = "/shop/vital-plus";
 
 // Hosted on the brand's own CDN, exactly as in the previous build.
-const HERO_URL = "https://rpropertybd.com/public/vital-plus-hero.png";
-const BOTTLE_URL = "https://rpropertybd.com/public/vital-bottle.png";
-const WORDMARK_URL = "https://rpropertybd.com/public/vital-plus.png";
-const PATTERN_URL = "https://rpropertybd.com/public/bgsq.png";
+const HERO_URL = "/avyra/vital-plus-hero.webp";
+const BOTTLE_URL = "/avyra/vital-bottle.webp";
+const WORDMARK_URL = "/avyra/vital-plus.webp";
+const PATTERN_URL = "/avyra/bgsq.webp";
 
 function BuyNow({ light = false }: { light?: boolean }) {
   const { t } = useLanguage();

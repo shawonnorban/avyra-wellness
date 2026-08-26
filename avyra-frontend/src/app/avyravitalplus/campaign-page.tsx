@@ -89,7 +89,13 @@ export function CampaignPage({
         className="sec"
         style={{ scrollMarginTop: 16, paddingTop: 10, paddingBottom: 32 }}
       >
-        <Reveal>
+        {/* Not wrapped in <Reveal>. It starts at opacity 0 and only becomes
+            visible after hydration, the observer firing and a 0.5s transition —
+            and the slide inside is this page's LCP element, so that animation
+            was costing 1.6s of "element render delay" on every visit. Reveal is
+            for what is below the fold, which is the only place it reads as an
+            entrance rather than a delay. */}
+        <div>
           <div className="lp-split">
             {/* A direct grid child, so it stretches to the order form's height. */}
             {slides.length > 0 && (
@@ -124,7 +130,7 @@ export function CampaignPage({
               </div>
             )}
           </div>
-        </Reveal>
+        </div>
       </section>
 
       {/* ── Who it is not for ── */}

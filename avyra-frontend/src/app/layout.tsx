@@ -4,6 +4,21 @@ import { GoogleTagManager } from "@/components/gtm";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
+/**
+ * Just the scheme and host of the API, for the connection hints below.
+ *
+ * Derived rather than written out, so a change of API host cannot leave a
+ * preconnect pointing at the old one — which would be worse than none, since the
+ * browser would open a connection it never uses.
+ */
+const API_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_URL ?? "").origin;
+  } catch {
+    return null;
+  }
+})();
+
 const rethinkSans = Rethink_Sans({
   variable: "--font-rethink",
   subsets: ["latin"],
@@ -63,6 +78,20 @@ export default function RootLayout({
       lang="en"
       className={`${rethinkSans.variable} ${anekBangla.variable} ${sora.variable} h-full antialiased`}
     >
+      <head>
+        {/* The API host serves every product photo and campaign slide, including
+            the campaign page's LCP image. Those URLs are only known after the
+            settings request resolves, so the browser cannot preload them — but
+            it can at least have the DNS, TCP and TLS done by the time it learns
+            of them, which is most of the LCP "resource load delay". */}
+        {API_ORIGIN && (
+          <>
+            <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
+            <link rel="dns-prefetch" href={API_ORIGIN} />
+          </>
+        )}
+      </head>
+
       <body className="min-h-full flex flex-col">
         {/* Tag manager first, so the noscript iframe sits immediately after
             <body> as Google's install instructions require. */}
