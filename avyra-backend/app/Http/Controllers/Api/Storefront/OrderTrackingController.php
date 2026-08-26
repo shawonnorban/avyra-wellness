@@ -66,7 +66,11 @@ class OrderTrackingController extends Controller
             OrderStatus::Pending, OrderStatus::Fake => 1,
             OrderStatus::Hold, OrderStatus::Confirm => $shipped ? 3 : 2,
             OrderStatus::Delivered => 4,
-            OrderStatus::Cancel => 0,
+            // A return did reach the customer's door, but the timeline is about
+            // where the order stands now, and it is over. Shown the same way as
+            // a cancellation rather than as a completed delivery, which would
+            // read as "your parcel arrived" to someone holding no parcel.
+            OrderStatus::Cancel, OrderStatus::Return => 0,
         };
 
         $steps = ['Received', 'Confirmed', 'Shipped', 'Delivered'];

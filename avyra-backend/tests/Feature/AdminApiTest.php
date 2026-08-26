@@ -6,6 +6,8 @@ use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Models\CampaignVisit;
+use App\Models\CourierConsignment;
+use App\Models\CourierReturn;
 use App\Models\Customer;
 use App\Models\Notification;
 use App\Models\Order;
@@ -288,6 +290,56 @@ class AdminApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.status_reason', null);
+    }
+
+    /**
+     * The hazard a seventh status introduces: CourierService::handleReturn()
+     * already puts the goods back and settles the order as `return`, so a staff
+     * member confirming what the courier recorded would credit the shelf twice.
+     */
+    public function test_marking_return_does_not_restore_stock_the_courier_already_did(): void
+    {
+        $product = $this->product();   // starts at 50
+        $order = $this->orderWithItem($product, 5);
+
+        // What the courier leaves behind: the goods already back on the shelf.
+        $consignment = CourierConsignment::create([
+            'order_id' => $order->id,
+            'courier' => 'steadfast',
+            'status' => 'Returned',
+        ]);
+        CourierReturn::create([
+            'consignment_id' => $consignment->id,
+            'order_id' => $order->id,
+            'return_date' => now()->toDateString(),
+            'stock_restored' => true,
+        ]);
+        $product->update(['quantity' => 55]);   // as the courier left it
+
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->patchJson("/api/admin/orders/{$order->id}/status", [
+                'status' => OrderStatus::Return->value,
+                'reason' => 'Courier brought it back',
+            ])
+            ->assertOk();
+
+        $this->assertSame(55, $product->fresh()->quantity);
+    }
+
+    /** With no courier return on file, the goods do come back. */
+    public function test_marking_return_restores_stock_when_nothing_else_has(): void
+    {
+        $product = $this->product();   // starts at 50
+        $order = $this->orderWithItem($product, 5);
+
+        $this->actingAs($this->userWithRole(Role::Manager))
+            ->patchJson("/api/admin/orders/{$order->id}/status", [
+                'status' => OrderStatus::Return->value,
+                'reason' => 'Brought back to the counter',
+            ])
+            ->assertOk();
+
+        $this->assertSame(55, $product->fresh()->quantity);
     }
 
     public function test_only_an_admin_can_read_settings(): void

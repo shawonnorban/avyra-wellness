@@ -57,12 +57,16 @@ class CustomerSegmentService
             'cancelled' => $base->where('status', OrderStatus::Cancel),
             'fake' => $base->where('status', OrderStatus::Fake),
 
-            // Off the consignment, not the order status: a return is recorded
-            // against the parcel, and the order may since have been settled
-            // either way.
-            'returned' => $base->whereIn('id', fn ($q) => $q->from('courier_returns')
-                ->select('order_id')
-                ->whereNotNull('order_id')),
+            // Both records of the same thing. A courier return writes a
+            // `courier_returns` row *and* settles the order as `return`, so
+            // either alone would usually do — but goods brought back to the
+            // counter have no consignment, and a parcel returned before the
+            // order status was reflected has no `return` on the order yet.
+            'returned' => $base->where(fn ($q) => $q
+                ->where('status', OrderStatus::Return->value)
+                ->orWhereIn('id', fn ($sub) => $sub->from('courier_returns')
+                    ->select('order_id')
+                    ->whereNotNull('order_id'))),
 
             default => $base->whereRaw('1 = 0'),
         };

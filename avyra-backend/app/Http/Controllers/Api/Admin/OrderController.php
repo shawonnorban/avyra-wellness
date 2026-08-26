@@ -6,6 +6,7 @@ use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
+use App\Models\CourierReturn;
 use App\Models\Customer;
 use App\Models\CustomerRiskProfile;
 use App\Models\Order;
@@ -221,8 +222,13 @@ class OrderController extends Controller
                 'status_reason' => $validated['reason'] ?? null,
             ]);
 
-            // Cancelling or returning an unfulfilled order puts the goods back.
-            if ($status->isFailed() && ! $previous->isFailed()) {
+            // Cancelling or returning an unfulfilled order puts the goods back —
+            // unless the courier already did it. CourierService::handleReturn()
+            // restores stock against the consignment and marks the return row
+            // `stock_restored`; that same return also settles the order as
+            // `return`, so without this check a staff member confirming what the
+            // courier already recorded would put the goods on the shelf twice.
+            if ($status->isFailed() && ! $previous->isFailed() && ! $this->stockAlreadyRestored($order)) {
                 $this->releaseStock($order, "Order marked {$status->value}");
             }
 
@@ -378,6 +384,20 @@ class OrderController extends Controller
      * Returns every line's quantity to stock. Used when an order is edited,
      * cancelled or deleted.
      */
+    /**
+     * Whether a courier return has already put this order's goods back.
+     *
+     * `courier_returns.stock_restored` is the flag CourierService sets after it
+     * restores, and it is the only record that the shelf has already been
+     * credited — the order row itself says nothing about it.
+     */
+    private function stockAlreadyRestored(Order $order): bool
+    {
+        return CourierReturn::where('order_id', $order->id)
+            ->where('stock_restored', true)
+            ->exists();
+    }
+
     private function releaseStock(Order $order, string $notes = 'Order items replaced'): void
     {
         $order->loadMissing('items.product', 'items.variant');

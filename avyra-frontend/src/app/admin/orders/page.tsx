@@ -64,6 +64,7 @@ const TABS: { label: string; key: string | null; countKey: string; className: st
   { label: "Hold", key: "hold", countKey: "hold", className: "bg-[#eab308] text-white" },
   { label: "Fake", key: "fake", countKey: "fake", className: "bg-[#ea580c] text-white" },
   { label: "Cancelled", key: "cancel", countKey: "cancel", className: "bg-[#dc2626] text-white" },
+  { label: "Returned", key: "return", countKey: "return", className: "bg-[#9333ea] text-white" },
 ];
 
 

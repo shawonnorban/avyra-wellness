@@ -119,18 +119,34 @@ once, guarded by `courier_returns.stock_restored`.
 
 Pathao and RedX are out of scope; add them behind the same `CourierService` shape if needed.
 
-## Order statuses — exactly six
+## Order statuses — exactly seven
 
-`pending · hold · fake · confirm · cancel · delivered`, lower-case, in `App\Enums\OrderStatus`.
+`pending · hold · fake · confirm · cancel · return · delivered`, lower-case, in
+`App\Enums\OrderStatus`.
+
+`return` was added last and is the only one with two writers, so it is worth knowing how it
+behaves. A courier return settles the order here rather than on `cancel`, so the status and the
+`courier_returns` row cannot tell different stories about one parcel; staff can also set it by hand
+for goods brought back to the counter, where there is no consignment at all. It counts as
+`isFailed()` — the parcel went out and came back, which is what the risk profile exists to predict —
+and as `isTerminal()`.
+
+**Stock is restored by whichever got there first, never both.** `CourierService::handleReturn()`
+restores against the consignment and sets `courier_returns.stock_restored`; the admin's manual path
+checks that flag before releasing, or a staff member confirming what the courier already recorded
+would credit the shelf twice.
 
 An earlier build had fourteen, most of them shipping milestones. **Those are not gone — they moved.**
 `CourierStatus` keeps the courier's own vocabulary (Picked / In Transit / Delivered / Returned /
 Cancelled) on the consignment at full fidelity; only settlement is reflected back onto the order, as
-`delivered` or `cancel`. Dispatch therefore no longer changes the order status at all, and
-`courier_returns.stock_restored` still guards stock restoration off the consignment, not the order.
+`delivered`, `cancel` or `return`. Dispatch therefore no longer changes the order status at all.
 
-Do not add a seventh. The set is what the Facebook event mapping keys off, and an unmapped status
-would silently send nothing.
+**Adding an eighth means touching four places, and three of them fail loudly rather than silently —
+which is the only reason this is safe to do.** `FacebookEventMap::keyFor()`,
+`CourierStatus::toOrderStatus()` and `OrderTrackingController::timeline()` all `match` on the enum
+with no default arm, so a new case throws `UnhandledMatchError` until each is answered; the fourth,
+`lib/order-status.ts`, mirrors the list for the admin UI. Decide deliberately whether the new status
+is `isFailed()` — that is what moves stock and the customer's risk profile.
 
 ## Facebook Pixel + Conversions API
 

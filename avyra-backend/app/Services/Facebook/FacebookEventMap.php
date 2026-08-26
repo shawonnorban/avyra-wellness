@@ -51,7 +51,10 @@ final class FacebookEventMap
             OrderStatus::Pending => self::LEAD,
             OrderStatus::Confirm => self::PURCHASE,
             OrderStatus::Delivered => self::DELIVERED_PURCHASE,
-            OrderStatus::Hold, OrderStatus::Fake, OrderStatus::Cancel => null,
+            // Internal judgements and failed outcomes, not conversions. A return
+            // does not retract the Purchase already reported either — that needs
+            // Meta's value-adjustment API, which is out of scope.
+            OrderStatus::Hold, OrderStatus::Fake, OrderStatus::Cancel, OrderStatus::Return => null,
         };
     }
 

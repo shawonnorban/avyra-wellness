@@ -24,6 +24,20 @@ enum OrderStatus: string
     case Cancel = 'cancel';
     case Delivered = 'delivered';
 
+    /**
+     * The goods came back.
+     *
+     * Distinct from `cancel`, which is an order that never shipped or was called
+     * off. A return has stock coming back onto the shelf and a delivery that was
+     * attempted and failed, and the shop wants to see the two apart.
+     *
+     * A courier return settles here rather than on `cancel`, so this status and
+     * the `courier_returns` table cannot tell different stories about the same
+     * parcel. A staff member can also set it by hand, for goods brought back to
+     * the counter, where there is no consignment at all.
+     */
+    case Return = 'return';
+
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());
@@ -68,7 +82,7 @@ enum OrderStatus: string
      */
     public function isTerminal(): bool
     {
-        return in_array($this, [self::Delivered, self::Cancel], true);
+        return in_array($this, [self::Delivered, self::Cancel, self::Return], true);
     }
 
     /**
@@ -85,9 +99,12 @@ enum OrderStatus: string
      * `fake` is excluded on purpose: it is a judgement about the order, not a
      * delivery outcome, and counting it would hold a customer responsible for
      * an order they may never have placed.
+     *
+     * `return` is included: the parcel went out and came back, which is exactly
+     * the outcome this profile exists to predict.
      */
     public function isFailed(): bool
     {
-        return $this === self::Cancel;
+        return in_array($this, [self::Cancel, self::Return], true);
     }
 }

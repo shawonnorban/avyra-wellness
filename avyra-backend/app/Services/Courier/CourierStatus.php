@@ -40,10 +40,13 @@ final class CourierStatus
     {
         return match ($courierStatus) {
             self::DELIVERED => OrderStatus::Delivered,
-            // A parcel that comes back or is called off leaves the order
-            // cancelled. The distinction between the two is not lost — it stays
-            // on the consignment, which is also what drives stock restoration.
-            self::RETURNED, self::CANCELLED => OrderStatus::Cancel,
+            // A parcel that came back settles the order as `return`, not
+            // `cancel`: the goods went out and came home, which is a different
+            // outcome from an order called off before it shipped, and the shop
+            // reports on the two separately. It also keeps this status and the
+            // `courier_returns` row telling the same story about one parcel.
+            self::RETURNED => OrderStatus::Return,
+            self::CANCELLED => OrderStatus::Cancel,
             // In flight. The order stays `confirm`; where the parcel actually is
             // belongs to the consignment, not the order.
             self::PICKED, self::IN_TRANSIT => null,

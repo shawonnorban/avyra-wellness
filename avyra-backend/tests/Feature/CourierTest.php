@@ -194,9 +194,11 @@ class CourierTest extends TestCase
 
         $this->assertSame($before + 2, $product->fresh()->quantity);
         $this->assertSame(1, \App\Models\CourierReturn::count());
-        // A returned parcel leaves the order cancelled; the return itself stays
-        // on the consignment, which is what guards the stock restore.
-        $this->assertSame(OrderStatus::Cancel, $order->fresh()->status);
+        // A returned parcel settles the order as `return`, not `cancel`: the
+        // goods went out and came home, which is a different outcome from an
+        // order called off before it shipped. The return row stays on the
+        // consignment and is still what guards the stock restore.
+        $this->assertSame(OrderStatus::Return, $order->fresh()->status);
     }
 
     public function test_the_webhook_answers_ok_for_an_unknown_consignment(): void
