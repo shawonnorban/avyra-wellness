@@ -17,9 +17,9 @@ use App\Models\Setting;
 use App\Services\StockService;
 use App\Support\Clock;
 use App\Support\Media;
+use App\Support\PaginatedResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -29,7 +29,7 @@ class OrderController extends Controller
 {
     public function __construct(private readonly StockService $stock) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
         $orders = $this->filtered($request)
             // The product is needed only for the row thumbnail, so just its images.
@@ -38,7 +38,8 @@ class OrderController extends Controller
             ->paginate($request->integer('per_page', 25))
             ->withQueryString();
 
-        return OrderResource::collection($orders);
+        // Flat, like every other paginated admin endpoint — see PaginatedResponse.
+        return PaginatedResponse::of($orders, OrderResource::class);
     }
 
     public function show(Order $order): JsonResponse

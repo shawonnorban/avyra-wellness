@@ -342,6 +342,53 @@ class AdminApiTest extends TestCase
         $this->assertSame(55, $product->fresh()->quantity);
     }
 
+    /**
+     * Every paginated admin endpoint returns the counts at the top level.
+     *
+     * A resource collection nests them under `meta` instead, which is what these
+     * two used to do — and nothing failed. `undefined > 1` is merely false, so
+     * the Previous/Next controls rendered nothing and the orders list stopped at
+     * 25 rows with no way to reach the rest. Worth pinning, because the next
+     * person to reach for `Resource::collection($paginator)` will reintroduce it
+     * without any test going red.
+     */
+    public function test_paginated_admin_lists_report_their_counts_at_the_top_level(): void
+    {
+        $product = $this->product();
+        $this->orderWithItem($product);
+
+        $manager = $this->userWithRole(Role::Manager);
+
+        foreach (['/api/admin/orders', '/api/admin/courier/consignments'] as $url) {
+            $body = $this->actingAs($manager)->getJson($url)->assertOk()->json();
+
+            $this->assertArrayHasKey('data', $body, $url);
+            $this->assertArrayHasKey('last_page', $body, $url);
+            $this->assertArrayHasKey('current_page', $body, $url);
+            $this->assertArrayHasKey('total', $body, $url);
+            $this->assertArrayNotHasKey('meta', $body, $url);
+        }
+    }
+
+    public function test_the_orders_list_pages_through_everything(): void
+    {
+        $product = $this->product();
+        foreach (range(1, 3) as $i) {
+            $this->orderWithItem($product);
+        }
+
+        $manager = $this->userWithRole(Role::Manager);
+
+        $first = $this->actingAs($manager)->getJson('/api/admin/orders?per_page=2')->assertOk()->json();
+        $this->assertCount(2, $first['data']);
+        $this->assertSame(3, $first['total']);
+        $this->assertSame(2, $first['last_page']);
+
+        $second = $this->actingAs($manager)->getJson('/api/admin/orders?per_page=2&page=2')->assertOk()->json();
+        $this->assertCount(1, $second['data']);
+        $this->assertSame(2, $second['current_page']);
+    }
+
     public function test_only_an_admin_can_read_settings(): void
     {
         $this->actingAs($this->userWithRole(Role::Manager))

@@ -10,9 +10,9 @@ use App\Models\Order;
 use App\Services\Courier\CourierService;
 use App\Services\Courier\CourierStatus;
 use App\Services\Courier\SteadfastClient;
+use App\Support\PaginatedResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Throwable;
 
 class CourierController extends Controller
@@ -22,7 +22,7 @@ class CourierController extends Controller
         private readonly SteadfastClient $steadfast,
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
         $consignments = CourierConsignment::query()
             ->with('order')
@@ -38,7 +38,8 @@ class CourierController extends Controller
             ->paginate($request->integer('per_page', 25))
             ->withQueryString();
 
-        return CourierConsignmentResource::collection($consignments);
+        // Flat, like every other paginated admin endpoint — see PaginatedResponse.
+        return PaginatedResponse::of($consignments, CourierConsignmentResource::class);
     }
 
     public function show(CourierConsignment $consignment): JsonResponse
