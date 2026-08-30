@@ -37,3 +37,9 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Database dumps. Never commit one — the repository is public and a dump
+# carries password hashes, session tokens, customer phone numbers and any API
+# key stored in `settings`.
+*.sql
+avyra-db.sql
