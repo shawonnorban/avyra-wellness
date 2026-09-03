@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Trash2,
   Truck,
+  X,
 } from "lucide-react";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -303,6 +304,45 @@ function OrdersView() {
                 <option key={status} value={status}>{orderStatusLabel(status)}</option>
               ))}
             </Select>
+
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="date"
+                value={filters.from ?? ""}
+                max={filters.to ?? undefined}
+                onChange={(e) => {
+                  setActiveTab(null);
+                  setFilter({ from: e.target.value || undefined });
+                }}
+                aria-label="From date"
+                className="w-[9.5rem]"
+              />
+              <span className="text-muted-foreground">–</span>
+              <Input
+                type="date"
+                value={filters.to ?? ""}
+                min={filters.from ?? undefined}
+                onChange={(e) => {
+                  setActiveTab(null);
+                  setFilter({ to: e.target.value || undefined });
+                }}
+                aria-label="To date"
+                className="w-[9.5rem]"
+              />
+              {(filters.from || filters.to) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(null);
+                    setFilter({ from: undefined, to: undefined });
+                  }}
+                  aria-label="Clear date filter"
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
