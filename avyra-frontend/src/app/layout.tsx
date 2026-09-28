@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Anek_Bangla, Rethink_Sans, Sora } from "next/font/google";
+import { FacebookPixel } from "@/components/facebook-pixel";
 import { GoogleTagManager } from "@/components/gtm";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -96,6 +97,8 @@ export default function RootLayout({
         {/* Tag manager first, so the noscript iframe sits immediately after
             <body> as Google's install instructions require. */}
         <GoogleTagManager />
+        {/* Renders only when there is no GTM id — see the note in lib/gtm.ts. */}
+        <FacebookPixel />
         <Providers>{children}</Providers>
       </body>
     </html>

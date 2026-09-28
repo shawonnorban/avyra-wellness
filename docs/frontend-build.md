@@ -51,6 +51,21 @@ ls .next/dev 2>/dev/null | wc -l                  # must be 0
 > `localhost:8000` into the production bundle, and the live site then calls an
 > API that only exists on this machine. That is what the `grep` above catches.
 
+> **`.env.production` is gitignored** (`.env*`), so a fresh checkout on a new
+> machine does not have it — and the build does not fail, it quietly bakes in
+> `localhost:8000` and switches tracking off. Create it before building:
+>
+> ```
+> NEXT_PUBLIC_API_URL=https://api.avyrabd.com/api
+> NEXT_PUBLIC_SITE_URL=https://avyrabd.com
+> NEXT_PUBLIC_GTM_ID=
+> NEXT_PUBLIC_FB_PIXEL_ID=<browser pixel id>
+> ```
+>
+> With `NEXT_PUBLIC_GTM_ID` blank the page loads the Pixel directly; set it and
+> the container owns the Pixel instead. Check the build afterwards:
+> `grep -rl 'api.avyrabd.com' .next/static | wc -l` must be above 0.
+
 When the change was to visible copy, check the string itself:
 
 ```bash

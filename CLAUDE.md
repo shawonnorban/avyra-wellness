@@ -150,9 +150,32 @@ is `isFailed()` — that is what moves stock and the customer's risk profile.
 
 ## Facebook Pixel + Conversions API
 
-**The browser half runs through GTM, not code.** The Pixel base snippet is a tag inside container
-`GTM-T78PFPTT`; `components/gtm.tsx` only installs the container and `lib/gtm.ts` pushes events.
-Never add a second Pixel snippet — two `fbq('init')` calls double-count everything.
+**The browser half has two modes, and exactly one is ever active.** Which one is decided at *build*
+time by two env vars in `avyra-frontend/.env.production`:
+
+- **GTM** — `NEXT_PUBLIC_GTM_ID` set. The Pixel base snippet is a tag inside the container;
+  `components/gtm.tsx` only installs the container and `lib/gtm.ts` pushes events to its dataLayer.
+- **Direct** — `NEXT_PUBLIC_GTM_ID` blank, `NEXT_PUBLIC_FB_PIXEL_ID` set. `components/facebook-pixel.tsx`
+  installs the base snippet and `pushEvent` calls `fbq` itself.
+
+`DIRECT_PIXEL_ID` in `lib/gtm.ts` is forced to `undefined` whenever a GTM id is present, so a container
+plus the direct snippet — two `fbq('init')` calls, every event counted twice — cannot happen by
+configuration. Never add a Pixel snippet anywhere else.
+
+**Production currently runs Direct** (GTM `GTM-T78PFPTT` was dropped along with the two old pixels it
+carried). The browser Pixel is set by `NEXT_PUBLIC_FB_PIXEL_ID` and is *independent* of the server
+pixel in Settings → Meta CAPI: changing one does not change the other, and both must name the same
+dataset or the browser and server copies of `Lead` cannot deduplicate.
+
+`pushEvent` may run before the Pixel exists — `ViewContent` fires during hydration, the snippet is an
+`afterInteractive` script — so calls made early queue in `window.__fbPending` and the snippet replays
+them after `PageView`. Dropping that queue loses the first event of nearly every visit. `Lead`'s
+`event_id` is passed as `{eventID}` (`toPixelCall`), which is the field Meta matches against the
+Conversions API copy.
+
+**`.env.production` is gitignored, so a fresh checkout does not have it.** Building without it does not
+fail: `NEXT_PUBLIC_API_URL` silently falls back to `http://localhost:8000/api` and tracking is off,
+and the result looks like a healthy build. Check the bundle before shipping (`docs/frontend-build.md`).
 
 Five events, three of them from an order status:
 

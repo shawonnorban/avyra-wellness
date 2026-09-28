@@ -1,6 +1,12 @@
 # Meta Pixel + Conversions API — handover
 
-For the media buyer configuring GTM container **`GTM-T78PFPTT`**.
+> **Current state: no GTM container.** Production is built with `NEXT_PUBLIC_GTM_ID`
+> blank and loads the Pixel directly from the page (`NEXT_PUBLIC_FB_PIXEL_ID`).
+> Everything below about GTM tags applies **only if a container id is set again**,
+> at which point the direct Pixel switches itself off — the two are never active
+> together. The event names, payloads and `event_id` rules are the same either way.
+
+For the media buyer configuring GTM container **`GTM-T78PFPTT`** (when one is in use).
 
 The site pushes events onto the dataLayer; the container decides which tags fire.
 **The Pixel base code is not in the site's source** — it must be a GTM tag, and
