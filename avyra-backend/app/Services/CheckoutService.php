@@ -14,6 +14,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Support\Phone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -29,7 +30,7 @@ class CheckoutService
      */
     public function place(array $data, ?string $ip = null, ?string $userAgent = null): Order
     {
-        $phone = preg_replace('/\D/', '', $data['phone']) ?? '';
+        $phone = Phone::canonical($data['phone']);
 
         return DB::transaction(function () use ($data, $phone, $ip, $userAgent) {
             $lines = $this->resolveLines($data['items']);
@@ -45,7 +46,12 @@ class CheckoutService
 
             $customer = $this->findOrCreateCustomer($data, $phone);
 
+            // Counted before this order exists, so it measures earlier purchases only.
+            $priorConfirmed = Order::priorConfirmedCount($phone);
+
             $order = Order::create([
+                'is_repeat' => $priorConfirmed > 0,
+                'prior_confirmed_orders' => $priorConfirmed,
                 'customer_id' => $customer->id,
                 'customer_name' => $data['customer_name'],
                 'phone' => $phone,

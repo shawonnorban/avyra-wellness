@@ -74,9 +74,20 @@ export function formatTime(value: string | null | undefined): string {
   }).format(new Date(value));
 }
 
-/** Strips everything but digits, matching how the API stores phone numbers. */
+/**
+ * The one form a Bangladeshi number is sent and stored in: local `01XXXXXXXXX`.
+ *
+ * Mirrors `App\Support\Phone::canonical()` on the API, so `+8801712345678` and
+ * `01712345678` reach the same customer. The API canonicalises too; doing it here
+ * means the number the buyer sees echoed back is the one that was stored.
+ */
 export function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.length === 13 && digits.startsWith("880")) return `0${digits.slice(3)}`;
+  if (digits.length === 10 && digits.startsWith("1")) return `0${digits}`;
+
+  return digits;
 }
 
 /** Loose check for a Bangladeshi mobile number (01XXXXXXXXX or 8801XXXXXXXXX). */

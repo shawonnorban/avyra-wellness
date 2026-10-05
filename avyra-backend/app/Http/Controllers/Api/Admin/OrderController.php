@@ -17,6 +17,7 @@ use App\Models\Setting;
 use App\Services\StockService;
 use App\Support\Clock;
 use App\Support\Media;
+use App\Support\Phone;
 use App\Support\PaginatedResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -127,7 +128,7 @@ class OrderController extends Controller
         ]);
 
         $order = DB::transaction(function () use ($validated, $request) {
-            $phone = preg_replace('/\D/', '', $validated['phone']);
+            $phone = Phone::canonical($validated['phone']);
 
             // POS orders create the customer inline so staff never leave the form.
             $customer = Customer::firstOrCreate(
@@ -141,10 +142,15 @@ class OrderController extends Controller
                 ],
             );
 
+            // Counted before this order exists, so it measures earlier purchases only.
+            $priorConfirmed = Order::priorConfirmedCount($phone);
+
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'customer_name' => $validated['customer_name'],
                 'phone' => $phone,
+                'is_repeat' => $priorConfirmed > 0,
+                'prior_confirmed_orders' => $priorConfirmed,
                 'address' => $validated['address'],
                 'delivery_zone' => $validated['delivery_zone'] ?? null,
                 'warehouse_id' => $validated['warehouse_id'] ?? null,
@@ -190,7 +196,7 @@ class OrderController extends Controller
             $order->fill(collect($validated)->except('items')->all());
 
             if (isset($validated['phone'])) {
-                $order->phone = preg_replace('/\D/', '', $validated['phone']);
+                $order->phone = Phone::canonical($validated['phone']);
             }
 
             $order->save();
@@ -236,6 +242,10 @@ class OrderController extends Controller
             if ($status->isTerminal() && $order->phone) {
                 CustomerRiskProfile::recomputeFor($order->phone);
             }
+
+            // total_spent counts Delivered only, so it goes stale the moment an order
+            // is delivered by hand rather than at the next checkout. Refresh it here.
+            $order->customer?->refreshOrderStats();
         });
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('items'))]);
@@ -330,6 +340,9 @@ class OrderController extends Controller
                 fn ($q) => $q->excludingShopSales())
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('source'), fn ($q) => $q->where('order_source', $request->string('source')))
+            // `returning=1` for re-orders, `returning=0` for first orders. Reads the
+            // snapshot taken at checkout, so it matches what the badge showed then.
+            ->when($request->filled('returning'), fn ($q) => $q->where('is_repeat', $request->boolean('returning')))
             ->when($request->filled('from'), fn ($q) => $q->whereDate('order_date', '>=', $request->date('from')))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('order_date', '<=', $request->date('to')))
             ->when($request->filled('search'), function ($q) use ($request) {

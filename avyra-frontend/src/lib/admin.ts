@@ -107,6 +107,8 @@ export type OrderFilters = {
    * without an endpoint of its own.
    */
   source?: string;
+  /** "1" = re-orders only, "0" = first orders only, unset = both. */
+  returning?: "1" | "0";
   search?: string;
   from?: string;
   to?: string;

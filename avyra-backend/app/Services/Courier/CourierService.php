@@ -128,6 +128,9 @@ class CourierService
                 if ($orderStatus->isTerminal() && $order->phone) {
                     CustomerRiskProfile::recomputeFor($order->phone);
                 }
+
+                // Same staleness as a manual status change: total_spent follows Delivered.
+                $order->customer?->refreshOrderStats();
             }
 
             if ($status === CourierStatus::RETURNED) {

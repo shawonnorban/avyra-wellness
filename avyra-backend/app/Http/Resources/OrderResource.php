@@ -25,6 +25,9 @@ class OrderResource extends JsonResource
             // the same 06:00 am.
             'order_date' => $this->order_date?->toIso8601String(),
             'order_source' => $this->order_source,
+            // Snapshot from checkout: a re-order is a fact about the moment of purchase.
+            'is_repeat' => (bool) $this->is_repeat,
+            'prior_confirmed_orders' => (int) $this->prior_confirmed_orders,
             'branch' => $this->branch,
             // First product image, for the thumbnail in the orders table.
             'thumbnail' => Media::url($this->whenLoaded('items', fn () => $this->items->first()?->product?->images[0] ?? null)),

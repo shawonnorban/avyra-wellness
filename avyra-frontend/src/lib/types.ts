@@ -253,6 +253,10 @@ export type AdminOrder = {
   status_reason: string | null;
   order_date: string | null;
   order_source: string | null;
+  /** Snapshot from checkout: a re-order is a fact about the moment of purchase. */
+  is_repeat: boolean;
+  /** Earlier orders from this number that were confirmed or delivered. */
+  prior_confirmed_orders: number;
   /** First product image, for the row thumbnail in the orders list. */
   thumbnail: string | null;
   customer: { id: string | null; name: string; phone: string | null; address: string | null };

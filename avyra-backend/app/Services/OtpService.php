@@ -6,6 +6,7 @@ use App\Models\OtpLog;
 use App\Models\OtpVerification;
 use App\Models\Setting;
 use App\Services\Sms\SmsManager;
+use App\Support\Phone;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -118,6 +119,6 @@ class OtpService
 
     private function normalize(string $phone): string
     {
-        return preg_replace('/\D/', '', $phone) ?? '';
+        return Phone::canonical($phone);
     }
 }

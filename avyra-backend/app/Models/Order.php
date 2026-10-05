@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Support\Clock;
+use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ class Order extends Model
         'utm_term', 'utm_content', 'utm_id', 'landing_url', 'referrer',
         'ip_address', 'user_agent', 'device_fingerprint', 'lazychat_order_id',
         'created_by', 'fb_events_sent', 'fb_event_ids',
+        'is_repeat', 'prior_confirmed_orders',
     ];
 
     protected $casts = [
@@ -36,6 +38,8 @@ class Order extends Model
         'status' => OrderStatus::class,
         'fb_events_sent' => 'array',
         'fb_event_ids' => 'array',
+        'is_repeat' => 'boolean',
+        'prior_confirmed_orders' => 'integer',
     ];
 
     protected static function booted(): void
@@ -47,6 +51,23 @@ class Order extends Model
             // worked, not against a clock six hours behind them.
             $order->order_date ??= Clock::today();
         });
+    }
+
+    /**
+     * How many earlier orders from this number were actually confirmed.
+     *
+     * "Confirmed" is `OrderStatus::soldValues()` — `confirm` and `delivered` — the same
+     * list inventory treats as a sale. Pending, hold, fake, cancel and return do not
+     * count: a buyer whose orders never reached confirmation is not a returning customer.
+     * Shop sales do count, since a counter purchase is still a purchase by that person.
+     */
+    public static function priorConfirmedCount(string $phone, ?string $exceptId = null): int
+    {
+        return static::query()
+            ->where('phone', Phone::canonical($phone))
+            ->whereIn('status', OrderStatus::soldValues())
+            ->when($exceptId, fn (Builder $q) => $q->where('id', '!=', $exceptId))
+            ->count();
     }
 
     /** A sale rung up over the counter: no delivery, no courier, no advertising. */

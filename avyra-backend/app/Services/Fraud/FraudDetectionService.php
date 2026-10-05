@@ -11,6 +11,7 @@ use App\Models\FraudAttemptLog;
 use App\Models\Order;
 use App\Models\OrderRiskScore;
 use App\Models\Setting;
+use App\Support\Phone;
 
 /**
  * Scores a checkout attempt before the order is created.
@@ -197,7 +198,7 @@ class FraudDetectionService
 
     public function normalizePhone(string $phone): string
     {
-        return preg_replace('/\D/', '', $phone) ?? '';
+        return Phone::canonical($phone);
     }
 
     private function signal(string $code, string $label, int $score): array

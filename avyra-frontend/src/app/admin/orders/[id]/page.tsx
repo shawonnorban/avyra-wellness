@@ -306,7 +306,21 @@ function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
 
           {history?.risk_profile && (
             <Card>
-              <h2 className="text-sm font-semibold text-foreground">Buyer history</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-foreground">Buyer history</h2>
+                {order.is_repeat && (
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                    Re-order
+                  </span>
+                )}
+              </div>
+              {order.is_repeat && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {order.prior_confirmed_orders === 1
+                    ? "One confirmed order from this number came before this one."
+                    : `${order.prior_confirmed_orders} confirmed orders from this number came before this one.`}
+                </p>
+              )}
               <dl className="mt-3 space-y-1.5 text-sm">
                 <Row label="Total orders" value={String(history.risk_profile.total_orders)} />
                 <Row label="Delivered" value={String(history.risk_profile.delivered)} />

@@ -305,6 +305,17 @@ function OrdersView() {
               ))}
             </Select>
 
+            <Select
+              value={filters.returning ?? ""}
+              onChange={(e) => setFilter({ returning: (e.target.value || undefined) as OrderFilters["returning"] })}
+              aria-label="Filter by customer type"
+              className="w-40"
+            >
+              <option value="">All customers</option>
+              <option value="1">Re-orders</option>
+              <option value="0">First orders</option>
+            </Select>
+
             <div className="flex items-center gap-1.5">
               <Input
                 type="date"
@@ -498,7 +509,17 @@ function OrderRow({
       </td>
 
       <td className="py-4 pr-4">
-        <span className="block font-semibold text-foreground">{order.customer.name}</span>
+        <span className="flex items-center gap-2 font-semibold text-foreground">
+          {order.customer.name}
+          {order.is_repeat && (
+            <span
+              className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700"
+              title={`${order.prior_confirmed_orders} confirmed order(s) from this number before this one`}
+            >
+              Re-order
+            </span>
+          )}
+        </span>
 
         <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           {order.customer.phone}

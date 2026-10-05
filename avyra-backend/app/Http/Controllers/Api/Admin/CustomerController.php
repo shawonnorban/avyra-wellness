@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerRiskProfile;
 use App\Support\Clock;
+use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -47,7 +48,7 @@ class CustomerController extends Controller
         $validated = $request->validate($this->rules());
 
         $validated['code'] ??= 'CUS-' . strtoupper(Str::random(8));
-        $validated['phone'] = preg_replace('/\D/', '', $validated['phone'] ?? '') ?: null;
+        $validated['phone'] = Phone::canonical($validated['phone'] ?? '') ?: null;
 
         return response()->json(['data' => Customer::create($validated)], 201);
     }
@@ -57,7 +58,7 @@ class CustomerController extends Controller
         $validated = $request->validate($this->rules($customer->id));
 
         if (isset($validated['phone'])) {
-            $validated['phone'] = preg_replace('/\D/', '', $validated['phone']);
+            $validated['phone'] = Phone::canonical($validated['phone']);
         }
 
         $customer->update($validated);
