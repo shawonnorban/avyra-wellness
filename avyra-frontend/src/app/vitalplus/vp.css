@@ -1,0 +1,319 @@
+/*
+ * /vitalplus — one narrow column, centred even on desktop, the way a phone-first
+ * single-product shop reads: announcement bar, hero card, trust strip, pale panels
+ * with white cards, a bordered offer card, a plain billing form, a dark footer and a
+ * sticky price-and-order bar. Palette is Vital Plus's: deep teal where the reference
+ * uses green, coral where it uses amber.
+ *
+ * Scoped under `.vp` so none of it leaks into the storefront or admin.
+ */
+
+.vp {
+  --vp-teal: #14505e;
+  --vp-teal-dk: #0c3640;
+  --vp-teal-deep: #082a33;
+  --vp-tint: #e6f2f3;
+  --vp-tint-2: #f1f8f8;
+  --vp-coral: #f0693f;
+  --vp-coral-dk: #d9532c;
+  --vp-coral-lt: #ffb59a;
+  --vp-cream: #fff4ee;
+  --vp-red: #d3202f;
+  --vp-ink: #101820;
+  --vp-muted: #5b6770;
+  --vp-line: #cfe3e6;
+
+  font-family: var(--vp-font), "Hind Siliguri", sans-serif;
+  background: #fff;
+  color: var(--vp-ink);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+.vp * { box-sizing: border-box; }
+.vp img { max-width: 100%; display: block; }
+
+.vp-col { max-width: 500px; margin: 0 auto; padding-bottom: 84px; }
+
+/* ── Buttons ── */
+.vp-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; border: 0; border-radius: 12px; font: inherit; font-weight: 700;
+  font-size: 18px; padding: 14px 16px; cursor: pointer; text-align: center;
+  transition: transform 0.15s, filter 0.15s;
+}
+.vp-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.vp-btn-amber { background: var(--vp-coral); color: #fff; box-shadow: 0 6px 18px rgba(240, 105, 63, 0.35); }
+.vp-btn-dark { background: var(--vp-teal-dk); color: var(--vp-coral-lt); }
+
+/* ── Announcement ── */
+.vp-announce {
+  margin: 10px 8px 0; padding: 14px 16px; border-radius: 14px; text-align: center;
+  background: var(--vp-coral); color: #fff; font-weight: 700; font-size: 18px; line-height: 1.35;
+}
+
+/* ── Hero card ── */
+.vp-hero { margin: 8px 8px 0; border-radius: 14px; overflow: hidden; background: var(--vp-teal-dk); }
+/* The slider is the shared .lp component; re-point its colours and drop the page-level
+   padding and background .lp would otherwise add. */
+.vp-slider.lp {
+  --red: var(--vp-coral); --border-2: rgba(255, 255, 255, 0.4);
+  background: transparent; padding-bottom: 0; overflow: visible; font-family: inherit;
+}
+.vp-slider .lp-slider-frame { border-radius: 0; box-shadow: none; background: #fff; }
+.vp-slider .lp-slider-dots { margin: 10px 0 0; }
+.vp-hero-body { padding: 18px 16px 20px; text-align: center; color: #fff; }
+.vp-hero-body h1 { margin: 0; font-size: 21px; line-height: 1.4; font-weight: 700; }
+.vp-hero-body p { margin: 8px 0 16px; font-size: 16px; color: rgba(255, 255, 255, 0.82); }
+
+/* ── Trust strip ── */
+.vp-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  margin: 14px 8px 0; text-align: center; font-size: 12px; color: var(--vp-muted);
+}
+.vp-strip div { display: grid; justify-items: center; gap: 6px; }
+.vp-strip span {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--vp-tint);
+  display: grid; place-items: center; color: var(--vp-teal);
+}
+.vp-strip svg { width: 18px; height: 18px; }
+.vp-strip p {
+  grid-column: 1 / -1; margin: 8px 0 0; padding: 8px; font-size: 13px;
+  background: var(--vp-tint-2); border: 1px solid var(--vp-line); border-radius: 0 0 12px 12px;
+}
+
+/* ── Sections ── */
+.vp-sec { padding: 22px 16px; }
+.vp-tint { background: var(--vp-tint); margin: 8px 0; }
+.vp-title {
+  margin: 0 0 14px; text-align: center; font-size: 22px; font-weight: 700;
+  line-height: 1.35; color: var(--vp-teal-dk);
+}
+.vp-title-red { color: var(--vp-red); font-size: 20px; }
+.vp-title-line::after {
+  content: ""; display: block; width: 48px; height: 3px; margin: 8px auto 0; background: var(--vp-coral);
+}
+.vp-sub { margin: -6px 0 14px; text-align: center; color: var(--vp-muted); font-size: 16px; }
+
+/* ── Video ── */
+.vp-video { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 14px; background: #000; }
+.vp-video-poster {
+  background-size: cover; background-position: center; cursor: pointer; padding: 0;
+  display: grid; place-items: center;
+}
+.vp-video-poster span {
+  width: 60px; height: 42px; border-radius: 12px; background: #e61e2a; color: #fff;
+  display: grid; place-items: center; font-size: 20px;
+}
+
+/* ── Benefit grid ── */
+.vp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.vp-gcard {
+  background: #fff; border-radius: 16px; padding: 18px 10px; text-align: center;
+  display: grid; justify-items: center; gap: 8px; font-weight: 700; font-size: 15px; line-height: 1.35;
+}
+.vp-gcard span { font-size: 30px; line-height: 1; }
+
+/* ── Rows ── */
+.vp-list { display: grid; gap: 12px; }
+.vp-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  background: var(--vp-tint-2); border-radius: 14px;
+}
+.vp-tint .vp-item { background: #fff; }
+.vp-item strong { display: block; font-size: 17px; line-height: 1.35; }
+.vp-item small { display: block; margin-top: 2px; font-size: 14px; color: var(--vp-muted); line-height: 1.5; }
+.vp-item-slim { padding-top: 12px; padding-bottom: 12px; }
+.vp-dot {
+  flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--vp-teal);
+  color: #fff; display: grid; place-items: center; font-size: 20px; font-weight: 700;
+}
+.vp-dot-warm { background: #fde7df; }
+
+/* ── Ingredients ── */
+.vp-ing { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; }
+.vp-ing-item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.vp-ing-item img {
+  width: 100%; max-width: 96px; aspect-ratio: 1; object-fit: contain;
+  background: #fff; border-radius: 12px; padding: 6px;
+}
+.vp-ing-emoji {
+  width: 100%; max-width: 96px; aspect-ratio: 1; background: #fff; border-radius: 12px;
+  display: grid; place-items: center; font-size: 38px;
+}
+.vp-ing-item strong { font-size: 14px; line-height: 1.25; font-weight: 600; }
+.vp-more { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--vp-line); text-align: center; }
+.vp-more p { margin: 0 0 10px; font-weight: 600; color: var(--vp-muted); }
+.vp-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.vp-chips span {
+  background: #fff; border: 1px solid var(--vp-line); border-radius: 999px;
+  padding: 4px 14px; font-size: 15px; color: var(--vp-teal-dk);
+}
+
+/* ── Offer card ── */
+.vp-offer {
+  position: relative; border: 2px solid var(--vp-teal); border-radius: 20px;
+  padding: 26px 14px 16px; background: #fff;
+}
+.vp-offer-label {
+  position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+  background: var(--vp-teal-dk); color: #fff; font-size: 14px; font-weight: 600;
+  padding: 4px 16px; border-radius: 999px; white-space: nowrap;
+}
+.vp-offer > img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 14px; }
+.vp-offer ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.vp-offer li {
+  display: flex; align-items: center; gap: 12px; padding: 12px 0;
+  border-bottom: 1px dashed var(--vp-line);
+}
+.vp-offer li strong { display: block; font-size: 16px; line-height: 1.3; }
+.vp-offer li small { display: block; font-size: 13px; color: var(--vp-muted); }
+.vp-offer li > div { flex: 1; }
+.vp-offer li b { color: var(--vp-red); font-size: 17px; white-space: nowrap; }
+.vp-offer li em {
+  font-style: normal; font-size: 13px; font-weight: 600; padding: 2px 10px;
+  border: 1px solid var(--vp-line); border-radius: 999px;
+}
+.vp-li-ico {
+  flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--vp-tint);
+  color: var(--vp-teal); display: grid; place-items: center; font-weight: 700;
+}
+.vp-total {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 14px 0; padding: 12px 14px; background: var(--vp-tint-2); border-radius: 12px;
+}
+.vp-total s { color: var(--vp-red); font-size: 15px; margin-right: auto; }
+.vp-total span { color: var(--vp-muted); font-size: 14px; }
+.vp-total b { font-size: 26px; color: var(--vp-teal-dk); }
+
+/* ── FAQ ── */
+.vp-faq { display: grid; gap: 10px; }
+.vp-faq details { border: 1px solid #e2e8ea; border-radius: 8px; background: #fff; }
+.vp-faq summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px; cursor: pointer; list-style: none; font-weight: 700; font-size: 16px; color: var(--vp-teal-dk);
+}
+.vp-faq summary::-webkit-details-marker { display: none; }
+.vp-faq summary svg { width: 18px; height: 18px; flex: none; transition: transform 0.2s; }
+.vp-faq details[open] summary svg { transform: rotate(45deg); }
+.vp-faq p { margin: 0; padding: 0 16px 14px; font-size: 15px; color: var(--vp-muted); }
+
+/* ── Order form: the shared form, restyled as a plain billing card ── */
+.vp-form.lp {
+  --red: var(--vp-teal-dk);
+  --red-dk: var(--vp-teal-deep);
+  --red-lt: var(--vp-tint-2);
+  --sr: none;
+  --green: var(--vp-teal);
+  background: transparent;
+  font-family: inherit;
+}
+.vp-form .card {
+  border: 1px solid #e2e8ea; border-radius: 20px; box-shadow: none; background: #fff; overflow: hidden;
+}
+.vp-form .f-input { border-radius: 6px; border: 1px solid #d5dde0; background: #fff; }
+.vp-form .f-input:focus { border-color: var(--vp-teal); box-shadow: 0 0 0 3px rgba(20, 80, 94, 0.12); }
+.vp-form .cta {
+  width: 100%; border-radius: 6px; background: var(--vp-teal-dk); color: var(--vp-coral-lt);
+  box-shadow: none; font-weight: 700;
+}
+.vp-state { text-align: center; padding: 36px 16px; border: 1px dashed var(--vp-line); border-radius: 16px; color: var(--vp-muted); }
+.vp-state .vp-btn { margin: 14px auto 0; max-width: 260px; }
+
+/* ── Footer ── */
+.vp-foot {
+  margin-top: 12px; padding: 34px 20px 22px; background: var(--vp-teal-dk);
+  color: #fff; text-align: center;
+}
+.vp-foot h2 { margin: 0 0 16px; font-size: 26px; font-weight: 700; color: var(--vp-coral-lt); }
+.vp-foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.vp-foot li { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; }
+.vp-foot li svg { width: 16px; height: 16px; flex: none; color: #9ad4dd; }
+.vp-foot a { color: inherit; text-decoration: none; }
+.vp-foot-social { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
+.vp-foot-social svg { width: 18px; height: 18px; }
+.vp-foot-quote { margin: 18px 0 0; font-size: 20px; font-weight: 700; }
+.vp-foot-quote em { font-style: normal; color: var(--vp-coral-lt); }
+.vp-foot-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-top: 12px; font-size: 15px; }
+.vp-foot-links a::before { content: "★ "; color: #9ad4dd; }
+.vp-foot-copy { margin: 14px 0 0; font-size: 14px; }
+
+.vp-disclaimer { margin: 0; padding: 14px 16px 6px; text-align: center; font-size: 12.5px; color: var(--vp-muted); }
+
+/* ── Sticky bar ── */
+.vp-sticky {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  background: #fff; border-top: 1px solid var(--vp-line); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+}
+.vp-sticky-in {
+  max-width: 500px; margin: 0 auto; padding: 8px 12px;
+  display: flex; align-items: center; gap: 14px;
+}
+.vp-sticky .vp-btn { flex: 1; width: 100%; padding: 12px 14px; border-radius: 10px; }
+
+/* ── Floating WhatsApp ── */
+.vp-wa {
+  position: fixed; bottom: 78px; z-index: 55;
+  right: max(12px, calc(50% - 238px));
+  width: 52px; height: 52px; border-radius: 50%; background: #25d366; color: #fff;
+  display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.vp-wa svg { width: 28px; height: 28px; }
+
+/* ── Form layout inside the narrow column ──
+   landing.css switches to its single-column form by viewport width, but this page is
+   500px wide on every screen, so a desktop viewport would keep the two-column layout
+   and push the order summary out of the column. Apply the small-screen rules always. */
+.vp-form .form-two-col { grid-template-columns: 1fr; gap: 24px; }
+.vp-form .prod-grid { grid-template-columns: 1fr; gap: 10px; }
+.vp-form .form-header { padding: 24px 18px; }
+.vp-form .form-body { padding: 20px 16px 24px; }
+.vp-form .ord-head,
+.vp-form .ord-row {
+  grid-template-columns: 1fr 3rem 4.5rem;
+  font-size: 11px; gap: 4px; padding-left: 10px; padding-right: 10px;
+}
+.vp-form .ord-col-var { display: none; }
+.vp-form .pay-2col { grid-template-columns: 1fr; }
+.vp-form .cta { font-size: 16px; padding: 15px 20px; }
+.vp-form .coup-btn { background: var(--vp-teal); color: #fff; }
+.vp-form .pay-opt.on { border-color: var(--vp-teal); background: var(--vp-tint-2); }
+
+/* ── Video testimonial carousel ── */
+.vp-center { text-align: center; }
+.vp-badge {
+  display: inline-block; margin-bottom: 10px; padding: 5px 16px; border-radius: 999px;
+  background: #fff; color: var(--vp-teal-dk); font-size: 14px; font-weight: 600;
+}
+.vp-car { position: relative; margin-top: 14px; }
+.vp-car-track {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.vp-car-track::-webkit-scrollbar { display: none; }
+.vp-car-item { flex: 0 0 72%; scroll-snap-align: center; }
+.vp-car-item .vp-video { aspect-ratio: 9 / 14; background-color: #1b1b1b; background-size: cover; }
+.vp-car-btn {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 38px; height: 38px; border-radius: 50%; border: 0; background: #fff; color: var(--vp-ink);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); display: grid; place-items: center; cursor: pointer;
+}
+.vp-car-btn svg { width: 20px; height: 20px; }
+.vp-car-prev { left: -6px; }
+.vp-car-next { right: -6px; }
+.vp-car-img { padding: 0; border: 0; background: #fff; border-radius: 14px; overflow: hidden; cursor: zoom-in; }
+.vp-car-img { aspect-ratio: 4 / 5; }
+.vp-car-img img { width: 100%; height: 100%; object-fit: contain; }
+.vp-lightbox {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.9);
+  display: grid; place-items: center; padding: 20px;
+}
+.vp-lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
+.vp-lightbox button {
+  position: absolute; top: 16px; right: 16px; width: 42px; height: 42px; border-radius: 50%;
+  border: 0; background: rgba(255, 255, 255, 0.15); color: #fff; display: grid; place-items: center; cursor: pointer;
+}
+
+/* `.lp` forces min-height: 100vh, which left a screen-high gap under the slider and
+   under the form. These wrappers should be exactly as tall as their content. */
+.vp-slider.lp,
+.vp-form.lp { min-height: 0; }

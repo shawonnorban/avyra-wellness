@@ -11,7 +11,7 @@ import api from "@/lib/api";
  * Review screenshots are configured on published landing pages, so the home page
  * shows whatever the current campaign is using — same behaviour as the old build.
  */
-function useReviewImages() {
+export function useReviewImages() {
   return useQuery({
     queryKey: ["storefront", "review-images"],
     queryFn: async () => {
