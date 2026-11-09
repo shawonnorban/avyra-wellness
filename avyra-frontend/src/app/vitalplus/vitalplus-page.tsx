@@ -1,8 +1,8 @@
 "use client";
 
-import { Banknote, ChevronLeft, ChevronRight, Leaf, MessageCircle, Plus, Truck, X } from "lucide-react";
+import { ArrowUp, Banknote, ChevronLeft, ChevronRight, Leaf, MessageCircle, Plus, Truck, X } from "lucide-react";
 import { Hind_Siliguri } from "next/font/google";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReviewImages } from "@/components/avyra/customer-reviews";
 import { LanguageLock, useLanguage } from "@/components/language-provider";
 import { ViewContentTracker } from "@/components/view-content-tracker";
@@ -43,7 +43,7 @@ function VideoCard({ url, title }: { url: string; title: string }) {
     return (
       <iframe
         className="vp-video"
-        src={`${youtubeEmbed(url)}&autoplay=1`}
+        src={youtubeEmbed(url).replace("autoplay=0", "autoplay=1")}
         title={title}
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -103,6 +103,31 @@ function ReviewSlider({ images }: { images: readonly string[] }) {
   );
 }
 
+/** Round arrow on the right edge; appears once the visitor has scrolled a little. */
+function BackToTop() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 400);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <button
+      type="button"
+      className="vp-top"
+      aria-label="উপরে যান"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+    >
+      <ArrowUp aria-hidden />
+    </button>
+  );
+}
+
 function Faq() {
   const { t } = useLanguage();
 
@@ -153,11 +178,17 @@ export function VitalPlusPage({
   const slides = slider?.image_urls?.length
     ? slider.image_urls
     : [product?.images?.[0] ?? "/avyra/vital-plus-hero.webp"];
-  const offerImage = product?.images?.[1] ?? "/avyra/vital-plus-jar.webp";
+  const offerImage =
+    product?.images?.[1] ?? product?.gallery_images?.[0] ?? product?.images?.[0] ?? null;
   const variants = product?.variants ?? [];
   const packs = product?.pack_options ?? [];
-  const price = product?.price ?? null;
-  const was = variants[0]?.compare_at_price ?? null;
+  // The form pre-selects the first variant, so the headline price follows it. The product's
+  // own `price` is only the fallback for a product without variants — it can be stale beside
+  // variant prices, which is what made the total disagree with the lines above it.
+  const first = variants[0];
+  const price = first?.price ?? product?.price ?? null;
+  const was = first?.compare_at_price ?? null;
+  const firstLabel = first ? [first.size, first.color].filter(Boolean).join(" · ") : "";
   const whatsapp = settings?.company?.whatsapp?.replace(/\D/g, "");
   const announcement = settings?.company?.scroll_text?.trim() || copy.announcement;
 
@@ -284,6 +315,15 @@ export function VitalPlusPage({
             </div>
           </section>
 
+          {/* ── Mid-page CTA ── */}
+          <section className="vp-sec vp-cta-band">
+            <h2>{copy.midCta.title}</h2>
+            <p>{copy.midCta.sub}</p>
+            <button type="button" className="vp-btn vp-btn-amber vp-btn-lg" onClick={scrollToForm}>
+              🛒 {copy.cta}
+            </button>
+          </section>
+
           {/* ── Reality check: titles only ── */}
           <section className="vp-sec">
             <h2 className="vp-title">{copy.reality.title}</h2>
@@ -319,8 +359,10 @@ export function VitalPlusPage({
           <section className="vp-sec">
             <div className="vp-offer">
               <span className="vp-offer-label">★ {copy.offer.label}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={offerImage} alt={product?.name ?? "Vital Plus"} loading="lazy" />
+              {offerImage && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={offerImage} alt={product?.name ?? "Vital Plus"} loading="lazy" />
+              )}
 
               <ul>
                 {variants.map((v) => (
@@ -359,7 +401,7 @@ export function VitalPlusPage({
               {price != null && (
                 <div className="vp-total">
                   {was != null && was > price && <s>{formatTaka(was, currency)}</s>}
-                  <span>{copy.offer.total}</span>
+                  <span>{copy.offer.total}{firstLabel && ` (${firstLabel})`}</span>
                   <b>{formatTaka(price, currency)}</b>
                 </div>
               )}
@@ -402,6 +444,8 @@ export function VitalPlusPage({
 
           <p className="vp-disclaimer">{copy.disclaimer}</p>
         </div>
+
+        <BackToTop />
 
         {/* ── Floating WhatsApp button; shown only when a number is set in Settings → Company ── */}
         {whatsapp && (

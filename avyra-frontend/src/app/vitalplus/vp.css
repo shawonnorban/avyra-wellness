@@ -43,7 +43,7 @@
 }
 .vp-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .vp-btn-amber { background: var(--vp-coral); color: #fff; box-shadow: 0 6px 18px rgba(240, 105, 63, 0.35); }
-.vp-btn-dark { background: var(--vp-teal-dk); color: var(--vp-coral-lt); }
+.vp-btn-dark { background: var(--vp-teal-dk); color: #f97316; }
 
 /* ── Announcement ── */
 .vp-announce {
@@ -62,22 +62,22 @@
 .vp-slider .lp-slider-frame { border-radius: 0; box-shadow: none; background: #fff; }
 .vp-slider .lp-slider-dots { margin: 10px 0 0; }
 .vp-hero-body { padding: 18px 16px 20px; text-align: center; color: #fff; }
-.vp-hero-body h1 { margin: 0; font-size: 21px; line-height: 1.4; font-weight: 700; }
-.vp-hero-body p { margin: 8px 0 16px; font-size: 16px; color: rgba(255, 255, 255, 0.82); }
+.vp-hero-body h1 { margin: 0; font-size: 22px; line-height: 1.4; font-weight: 700; }
+.vp-hero-body p { margin: 10px 0 18px; font-size: 17px; font-weight: 500; color: #fff; }
 
 /* ── Trust strip ── */
 .vp-strip {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-  margin: 14px 8px 0; text-align: center; font-size: 12px; color: var(--vp-muted);
+  margin: 14px 8px 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--vp-ink);
 }
 .vp-strip div { display: grid; justify-items: center; gap: 6px; }
 .vp-strip span {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--vp-tint);
-  display: grid; place-items: center; color: var(--vp-teal);
+  width: 42px; height: 42px; border-radius: 50%; background: var(--vp-teal-dk);
+  display: grid; place-items: center; color: #fff;
 }
-.vp-strip svg { width: 18px; height: 18px; }
+.vp-strip svg { width: 20px; height: 20px; }
 .vp-strip p {
-  grid-column: 1 / -1; margin: 8px 0 0; padding: 8px; font-size: 13px;
+  grid-column: 1 / -1; margin: 8px 0 0; padding: 10px; font-size: 15px; font-weight: 700; color: var(--vp-teal-dk);
   background: var(--vp-tint-2); border: 1px solid var(--vp-line); border-radius: 0 0 12px 12px;
 }
 
@@ -92,7 +92,7 @@
 .vp-title-line::after {
   content: ""; display: block; width: 48px; height: 3px; margin: 8px auto 0; background: var(--vp-coral);
 }
-.vp-sub { margin: -6px 0 14px; text-align: center; color: var(--vp-muted); font-size: 16px; }
+.vp-sub { margin: -6px 0 14px; text-align: center; color: #26343c; font-weight: 600; font-size: 17px; }
 
 /* ── Video ── */
 .vp-video { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 14px; background: #000; }
@@ -120,8 +120,8 @@
   background: var(--vp-tint-2); border-radius: 14px;
 }
 .vp-tint .vp-item { background: #fff; }
-.vp-item strong { display: block; font-size: 17px; line-height: 1.35; }
-.vp-item small { display: block; margin-top: 2px; font-size: 14px; color: var(--vp-muted); line-height: 1.5; }
+.vp-item strong { display: block; font-size: 18px; color: var(--vp-ink); line-height: 1.35; }
+.vp-item small { display: block; margin-top: 3px; font-size: 15px; font-weight: 500; color: #26343c; line-height: 1.55; }
 .vp-item-slim { padding-top: 12px; padding-bottom: 12px; }
 .vp-dot {
   flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--vp-teal);
@@ -190,12 +190,13 @@
 .vp-faq details { border: 1px solid #e2e8ea; border-radius: 8px; background: #fff; }
 .vp-faq summary {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 14px 16px; cursor: pointer; list-style: none; font-weight: 700; font-size: 16px; color: var(--vp-teal-dk);
+  padding: 14px 16px; cursor: pointer; list-style: none; font-weight: 700; font-size: 17px; color: #0a7d92;
 }
 .vp-faq summary::-webkit-details-marker { display: none; }
 .vp-faq summary svg { width: 18px; height: 18px; flex: none; transition: transform 0.2s; }
 .vp-faq details[open] summary svg { transform: rotate(45deg); }
-.vp-faq p { margin: 0; padding: 0 16px 14px; font-size: 15px; color: var(--vp-muted); }
+.vp-faq details[open] summary { color: var(--vp-coral-dk); }
+.vp-faq p { margin: 0; padding: 0 16px 14px; font-size: 16px; color: #26343c; }
 
 /* ── Order form: the shared form, restyled as a plain billing card ── */
 .vp-form.lp {
@@ -213,7 +214,7 @@
 .vp-form .f-input { border-radius: 6px; border: 1px solid #d5dde0; background: #fff; }
 .vp-form .f-input:focus { border-color: var(--vp-teal); box-shadow: 0 0 0 3px rgba(20, 80, 94, 0.12); }
 .vp-form .cta {
-  width: 100%; border-radius: 6px; background: var(--vp-teal-dk); color: var(--vp-coral-lt);
+  width: 100%; border-radius: 6px; background: var(--vp-teal-dk); color: #f97316;
   box-shadow: none; font-weight: 700;
 }
 .vp-state { text-align: center; padding: 36px 16px; border: 1px dashed var(--vp-line); border-radius: 16px; color: var(--vp-muted); }
@@ -301,8 +302,8 @@
 .vp-car-prev { left: -6px; }
 .vp-car-next { right: -6px; }
 .vp-car-img { padding: 0; border: 0; background: #fff; border-radius: 14px; overflow: hidden; cursor: zoom-in; }
-.vp-car-img { aspect-ratio: 4 / 5; }
-.vp-car-img img { width: 100%; height: 100%; object-fit: contain; }
+.vp-car-img { flex: 0 0 100%; }
+.vp-car-img img { width: 100%; height: auto; }
 .vp-lightbox {
   position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.9);
   display: grid; place-items: center; padding: 20px;
@@ -317,3 +318,18 @@
    under the form. These wrappers should be exactly as tall as their content. */
 .vp-slider.lp,
 .vp-form.lp { min-height: 0; }
+
+/* ── Mid-page CTA ── */
+.vp-cta-band { text-align: center; }
+.vp-cta-band h2 { margin: 0; font-size: 24px; line-height: 1.35; color: var(--vp-teal-dk); }
+.vp-cta-band p { margin: 8px 0 16px; font-size: 17px; font-weight: 600; color: #26343c; }
+.vp-btn-lg { font-size: 21px; padding: 18px 16px; }
+
+/* ── Back to top ── */
+.vp-top {
+  position: fixed; bottom: 138px; z-index: 55; right: max(12px, calc(50% - 238px));
+  width: 46px; height: 46px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--vp-teal-dk); color: #fff; display: grid; place-items: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.vp-top svg { width: 22px; height: 22px; }
