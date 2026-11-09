@@ -45,7 +45,7 @@ export const copy = {
   /* Names come from the product FAQ ("মূল উপাদানগুলো কী কী?"). Tiles without a matching
      photo in /public/avyra use an emoji instead, so no ingredient is shown with the wrong picture. */
   ingredients: {
-    title: "Vital Plus-এর উপাদান",
+    title: "১৮ টি প্রাকৃতিক উপাদানে তৈরি বিশেষ ফর্মুলা",
     items: [
       { img: "/avyra/ing-honey.webp", name: "খাঁটি মধু" },
       { img: "/avyra/ing-leaf-large.webp", name: "অশ্বগন্ধা" },
