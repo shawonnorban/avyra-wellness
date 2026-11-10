@@ -169,7 +169,7 @@ export function VitalPlusPage({
 
   // Every order button lands on the form; pressing one is intent, not submission.
   const scrollToForm = () => {
-    pushInitiateCheckout(product);
+    pushInitiateCheckout(tracked);
     orderRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -187,6 +187,10 @@ export function VitalPlusPage({
   // variant prices, which is what made the total disagree with the lines above it.
   const first = variants[0];
   const price = first?.price ?? product?.price ?? null;
+  // What the Pixel and the form see: the product with the price the page shows. Left as it
+  // came, `product.price` can be stale beside the variants, and ViewContent / InitiateCheckout
+  // would then report a value the visitor never saw.
+  const tracked = product ? { ...product, price: price ?? product.price } : undefined;
   const was = first?.compare_at_price ?? null;
   const firstLabel = first ? [first.size, first.color].filter(Boolean).join(" · ") : "";
   const whatsapp = settings?.company?.whatsapp?.replace(/\D/g, "");
@@ -198,7 +202,7 @@ export function VitalPlusPage({
         <ViewContentTracker
           productId={product?.id}
           productName={product?.name}
-          value={product?.price}
+          value={tracked?.price}
         />
 
         <div className="vp-col">
@@ -422,7 +426,7 @@ export function VitalPlusPage({
           <section ref={orderRef} id="order-form" className="vp-sec" style={{ scrollMarginTop: 16 }}>
             <div className="lp vp-form">
               {product ? (
-                <CampaignOrderForm product={product} />
+                <CampaignOrderForm product={tracked ?? product} />
               ) : (
                 <div className="vp-state" role="status">
                   {isError ? (
